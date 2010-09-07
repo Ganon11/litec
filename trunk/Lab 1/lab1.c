@@ -1,4 +1,5 @@
-/* Names: Michael Stark
+/*
+ * Names: Michael Stark + David Melecio-Vázquez 
  * Section: 04
  * Date: 6 September 2010
  * File name: lab1.c
