@@ -27,13 +27,13 @@ char* newline(); // Helper function that returns "\r\n"
 //-----------------------------------------------------------------------------
 // Global Variables
 //-----------------------------------------------------------------------------
-sbit at 0xB6 LED0; // LED0, associated with Port 3 Pin 6
-//sbit at 0x__ BILED0; // BILED0, associated with ?????
-//sbit at 0x__ BILED1; // BILED1, associated with ?????
-//sbit at 0x__ BUZZER; // Buzzer, associated with ?????
 sbit at 0xA0 SS; // Slide switch, associated with Port 2 Pin 0
 sbit at 0xB0 PB1 ; // Push button 0, associated with Port 3, Pin 0
-//sbit at 0x__ PB2; // Push button 1, associated with ?????
+sbit at 0xB1 PB2; // Push button 1, associated with Port 3 Pin 1
+sbit at 0xB3 BILED0; // BILED0, associated with Port 3 Pin 3
+sbit at 0xB4 BILED1; // BILED1, associated with Port 3 Pin 4
+sbit at 0xB6 LED0; // LED0, associated with Port 3 Pin 6
+sbit at 0xB7 BUZZER; // Buzzer, associated with Port 3 Pin 7
 
 //-----------------------------------------------------------------------------
 // Function Definitions
@@ -52,12 +52,29 @@ void main(void) {
  * Initializes Ports 2 and 3 in the desired modes for input and output
  */
 void PortInit(void) {
-  // Port 3
-  //P3MDOUT ________; // set Port 3 output pins to push-pull mode (fill in the blank)
-  //P3MDOUT ________; // set Port 3 input pins to open drain mode (fill in the blank)
-  //P3 ________; // set Port 3 input pins to high impedance state (fill in the blank)
-  // Port 2
-  // configure Port 2 as needed
+  // Port 2 Constant Masks
+  unsigned char P2MDOUT_HI = 0x00; // 0000 0000 - unused in lab 1
+  unsigned char P2MDOUT_LO = 0xFE; // 1111 1110
+  unsigned char P2_HI = 0x01; // 0000 0001
+  
+  // Port 3 Constant Masks
+  unsigned char P3MDOUT_HI = 0xD8; // 1101 1000
+  unsigned char P3MDOUT_LO = 0xFC; // 1111 1100
+  unsigned char P3_HI = 0x03; // 0000 0011
+  
+  // Set Port 2 MDOUT high bits
+  P2MDOUT |= P2MDOUT_HI; // in lab 1, does nothing
+  // Set Port 2 MDOUT low bits
+  P2MDOUT &= P2MDOUT_LO;
+  // Set Port 2 impedence (high) bits
+  P2 |= P2_HI;
+  
+  // Set Port 3 MDOUT high bits
+  P3MDOUT |= P3MDOUT_HI;
+  // Set Port 3 MDOUT low bits
+  P3MDOUT &= P3MDOUT_LO;
+  // Set Port 2 impedence (high) bits
+  P3 |= P3_HI;
 }
 
 /*
@@ -80,16 +97,31 @@ void SetOutputs(void) {
   int push2 = CheckPushButton2();
   PrintInputStatus(slide, push1, push2);
   if (!slide) { // if Slide switch is off
-    LED0 = 0; // Light LED
+    BILED0 = 1; // Turn off Green LED
+    BILED1 = 1; // Turn off Red LED
+    LED0 = 0; // Turn ON LED
+    BUZZER = 1; // Turn off Buzzer
   } else { // if Slide Switch is on
     LED0 = 1; // turn off LED
 
     if (push1 && push2) { // if both pushbuttons are pressed
       // Turn on Buzzer
+      BUZZER = 0;
+      // Turn other outputs off
+      BILED0 = 1; // Turn off Green LED
+      BILED1 = 1; // Turn off Red LED      
     } else if (push1) { // if pushbutton 1 is pressed
       // Set BiLED to GREEN
+      BILED0 = 0;
+      // Turn other outputs off
+      BILED1 = 1;
+      BUZZER = 1;
     } else if (push2) { // if pushbutton 2 is pressed
       // Set BiLED to RED
+      BILED1 = 0;
+      // Turn other outputs off
+      BILED0 = 1;
+      BUZZER = 1;
     }
   }
 }
@@ -113,8 +145,7 @@ int CheckPushButton1(void) {
 int CheckPushButton2(void) {
   // !PB2 will evaluate to 1 if PB2 is off, or 0 if PB2 is on.  These are the
   // desired return values, so we'll just return the statement.
-//  return !PB2;
-  return 0;
+  return !PB2;
 }
 
 /*
