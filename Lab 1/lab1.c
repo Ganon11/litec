@@ -53,7 +53,7 @@ void main(void) {
  */
 void PortInit(void) {
   // Port 2 Constant Masks
-  unsigned char P2MDOUT_HI = 0x00; // 0000 0000 - unused in lab 1-1
+  unsigned char P2MDOUT_HI = 0x00; // 0000 0000 - unused in lab 1
   unsigned char P2MDOUT_LO = 0xFE; // 1111 1110
   unsigned char P2_HI = 0x01; // 0000 0001
   
@@ -61,19 +61,19 @@ void PortInit(void) {
   unsigned char P3MDOUT_HI = 0xD8; // 1101 1000
   unsigned char P3MDOUT_LO = 0xFC; // 1111 1100
   unsigned char P3_HI = 0x03; // 0000 0011
-
+  
   // Set Port 2 MDOUT high bits
-  P2MDOUT |= P2MDOUT_HI; // in lab 1-1, does nothing
+  P2MDOUT |= P2MDOUT_HI; // in lab 1, does nothing
   // Set Port 2 MDOUT low bits
   P2MDOUT &= P2MDOUT_LO;
   // Set Port 2 impedence (high) bits
   P2 |= P2_HI;
-
+  
   // Set Port 3 MDOUT high bits
   P3MDOUT |= P3MDOUT_HI;
   // Set Port 3 MDOUT low bits
   P3MDOUT &= P3MDOUT_LO;
-  // Set Port 3 impedence (high) bits
+  // Set Port 2 impedence (high) bits
   P3 |= P3_HI;
 }
 
@@ -174,17 +174,18 @@ void PrintInputStatus(int slide, int push1, int push2) {
   // Print the Pushbuttons status
   if (push1 && push2) {
     // Both pushbuttons are pressed.
-    printf("Pushbuttons 1 and 2 activated.%s", newline());
+    printf("Pushbuttons 1 and 2 activated.");
   } else if (push1) {
     // Only pushbutton 1 pressed.
-    printf("Pushbutton 1 activated.%s", newline());
+    printf("Pushbutton 1 activated.");
   } else if (push2) {
     // Only pushbutton 2 pressed.
-    printf("Pushbutton 2 activated.%s", newline());
+    printf("Pushbutton 2 activated.");
   } else {
     // No pushbuttons pressed.
-    printf("Pushbuttons 1 and 2 not activated.%s", newline());
+    printf("Pushbuttons 1 and 2 not activated.");
   }
+  printf("%s", newline());
 }
 
 /*
