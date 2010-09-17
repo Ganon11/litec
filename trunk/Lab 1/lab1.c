@@ -30,8 +30,9 @@ sbit at 0xA0 SS; // Slide switch, associated with Port 2 Pin 0
 sbit at 0xB0 PB1 ; // Push button 0, associated with Port 3, Pin 0
 sbit at 0xB1 PB2; // Push button 1, associated with Port 3 Pin 1
 sbit at 0xB3 BILED0; // BILED0, associated with Port 3 Pin 3
-                     // 
+                     // BILED0 controls the Red light.
 sbit at 0xB4 BILED1; // BILED1, associated with Port 3 Pin 4
+                     // BILED1 controls the Green light.
 sbit at 0xB6 LED0; // LED0, associated with Port 3 Pin 6
 sbit at 0xB7 BUZZER; // Buzzer, associated with Port 3 Pin 7
 
