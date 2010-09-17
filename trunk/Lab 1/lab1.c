@@ -3,11 +3,10 @@
  * Section: 04
  * Date: 6 September 2010
  * File name: lab1.c
- * Program description:
- *
- * This program is incomplete. Part of the code is provided as an example. You
- * need to modify the code, adding code to satisfy the stated requirements. Blank
- * lines have also been provided at some locations, indicating an incomplete line.
+ * Program description: Manipulate simple outputs (an LED, a BiLED, and a
+ *   buzzer) based on simple inputs (a slide switch and two push buttons).
+ *   For a more detailed explanation of exact behavior, see comment above the
+ *   SetOutputs function.
  */
  
 #include <c8051_SDCC.h> // include files. This file is available online
@@ -31,6 +30,7 @@ sbit at 0xA0 SS; // Slide switch, associated with Port 2 Pin 0
 sbit at 0xB0 PB1 ; // Push button 0, associated with Port 3, Pin 0
 sbit at 0xB1 PB2; // Push button 1, associated with Port 3 Pin 1
 sbit at 0xB3 BILED0; // BILED0, associated with Port 3 Pin 3
+                     // 
 sbit at 0xB4 BILED1; // BILED1, associated with Port 3 Pin 4
 sbit at 0xB6 LED0; // LED0, associated with Port 3 Pin 6
 sbit at 0xB7 BUZZER; // Buzzer, associated with Port 3 Pin 7
@@ -97,8 +97,8 @@ void SetOutputs(void) {
   int push2 = CheckPushButton2();
   PrintInputStatus(slide, push1, push2);
   if (!slide) { // if Slide switch is off
-    BILED0 = 1; // Turn off Green LED
-    BILED1 = 1; // Turn off Red LED
+    BILED0 = 1; // Turn off Red LED
+    BILED1 = 1; // Turn off Green LED
     LED0 = 0; // Turn ON LED
     BUZZER = 1; // Turn off Buzzer
   } else { // if Slide Switch is on
@@ -108,19 +108,24 @@ void SetOutputs(void) {
       // Turn on Buzzer
       BUZZER = 0;
       // Turn other outputs off
-      BILED0 = 1; // Turn off Green LED
-      BILED1 = 1; // Turn off Red LED      
+      BILED0 = 1; // Turn off Red LED
+      BILED1 = 1; // Turn off Green LED      
     } else if (push1) { // if pushbutton 1 is pressed
       // Set BiLED to GREEN
+      BILED1 = 0;
+      // Turn other outputs off
+      BILED0 = 1;
+      BUZZER = 1;
+    } else if (push2) { // if pushbutton 2 is pressed
+      // Set BiLED to RED
       BILED0 = 0;
       // Turn other outputs off
       BILED1 = 1;
       BUZZER = 1;
-    } else if (push2) { // if pushbutton 2 is pressed
-      // Set BiLED to RED
-      BILED1 = 0;
-      // Turn other outputs off
+    } else { // if no pushbuttons are pressed
+      // Turn all outputs off
       BILED0 = 1;
+      BILED1 = 1;
       BUZZER = 1;
     }
   }
