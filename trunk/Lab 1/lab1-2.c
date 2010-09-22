@@ -20,14 +20,19 @@
 //-----------------------------------------------------------------------------
 void Port_Init(void);      // Initialize ports for input and output
 void Timer_Init(void);     // Initialize Timer 0 
-void Interrupt_Init(void); //Initialize interrupts
-void Timer0_ISR(void) interrupt 1;
-unsigned char random(unsigned char N);
+void Interrupt_Init(void); // Initialize interrupts
+void Timer0_ISR(void) interrupt 1; // Called at Timer0 overflow
+unsigned char unique_random(unsigned char last_state); // Generates a random number different from the last one
+unsigned char random(unsigned char N); // Generates a random number between 0 and N-1
+void wait_one_second(void); // Waits 1 second
+void flash_lights(void); // Flashes BiLED green and red while game is paused.
+void light_green(void); // Light BiLED green
+void light_red(void); // Light BiLED red
 int CheckPushButton1(void); // function which checks CheckPushButton1
 int CheckPushButton2(void); // function which checks CheckPushButton1
 int CheckSlideSwitch(void); // function that checks the Slide switch
 void PrintInputStatus(int slide, int push1, int push2); // Helper function to print the status of the inputs.
-char* newline();
+char* newline(); // Helper function, used when printing (returns "\r\n")
 
 //-----------------------------------------------------------------------------
 // Global Variables
@@ -49,47 +54,118 @@ unsigned int Counts = 0;
 
 //***************
 void main(void) {
-  int PB1_Status, PB2_Status, SS_Status;
+  // Local Variable Declarations
+  unsigned char turns[10];
+  int i, push1, push2, correct;
+
   Sys_Init();      // System Initialization
   Port_Init();     // Initialize ports 2 and 3 
   Interrupt_Init();
   Timer_Init();    // Initialize Timer 0 
   putchar(' ');    // the quote fonts may not copy correctly into SiLabs IDE
-  
-  printf("Start\r\n");
-  // the following loop prints the number of overflows that occur
-  // while the pushbutton is pressed, the BILED is lit while the
-  // button is pressed
+  putchar('\r');
+
+  // ************************************************
+  // BASIC SIMON GAME
+  // ************************************************
+
+  // Enable Timer 0
+  TR0 = 1;
+
+  // Flash the BiLED while the SS is off.
+  flash_lights();
+
+  // Play one round of the game
   while (1) {
-    SS_Status = CheckSlideSwitch();
-    PB1_Status = CheckPushButton1();
-    PB2_Status = CheckPushButton2();
-    PrintInputStatus(SS_Status, PB1_Status, PB2_Status);
-    if (!SS_Status) {
-      // Light BiLED Red
-      BILED0 = 0;
-
-      // Turn Green BiLED off
-      BILED1 = 1;
-    } else {
-      // Light BiLED Green
-      BILED1 = 0;
-
-      // Turn Red BiLED off
-      BILED0 = 1;
+    // Fill turns array
+    turns[0] = unique_random(3);
+    for (i = 1; i < 10; i++) {
+      turns[i] = unique_random(turns[i-1]);
     }
 
-    if (PB1_Status) {
-      LED0 = 0;
-    } else {
+    correct = 0;
+
+    // Wait to start the game
+    wait_one_second();
+    wait_one_second();
+    for (i = 0; i < 10; i++) {
+      // Each for loop execution represents one turn
+      // This code 'pauses' the game while the SS is off.
+      flash_lights();
+
+      switch (turns[i]) {
+        case 0:
+          // Light LED0
+          LED0 = 0;
+          // Turn off LED1
+          LED1 = 1;
+          break;
+        case 1:
+          // Light LED1
+          LED1 = 0;
+          // Turn off LED0
+          LED0 = 1;
+          break;
+        case 2:
+          // Light both LED0 and LED1
+          LED0 = 0;
+          LED1 = 0;
+          break;
+        default:
+          printf("Error: bad turns[%d] value: %d%s", i, turns[i], newline());
+      }
+      wait_one_second();
+      // Turn off both LEDs
       LED0 = 1;
+      LED1 = 1;
+      push1 = CheckPushButton1();
+      push2 = CheckPushButton2();
+      // This code 'pauses' the game while the SS if off.
+      flash_lights();
+
+      switch (turns[i]) {
+        case 0:
+          if (push1 && !push2) {
+            // Correct!
+            correct++;
+            light_green();
+          } else {
+            // Incorrect!
+            light_red();
+          }
+          break;
+        case 1:
+          if (!push1 && push2) {
+            // Correct!
+            correct++;
+            light_green();
+          } else {
+            // Incorrect!
+            light_red();
+          }
+          break;
+        case 2:
+          if (push1 && push2) {
+            // Correct!
+            correct++;
+            light_green();
+          } else {
+            // Incorrect!
+            light_red();
+          }
+          break;
+        default:
+          printf("Error: bad turns[%d] value: %d%s", i, turns[i], newline());
+      }
     }
 
-    if (PB2_Status) {
-      LED1 = 0;
-    } else {
-      LED1 = 1;
-    }
+    // Turn the timer off.
+    TR0 = 0;
+    printf("Total number of correct inputs: %d%s", correct, newline());
+    // Wait for user to turn game off
+    while (CheckSlideSwitch());
+    // Wait for user to turn game on
+    flash_lights();
   }
 }
 
@@ -143,10 +219,78 @@ void Timer0_ISR(void) interrupt 1 {
 /******************************************************************************/
 
 /*
- * Returns a random integer between 0 and N-1 ( a range of N numbers).
+ * Returns a random number different from last_state.
+ */
+unsigned char unique_random(unsigned char last_state) {
+  unsigned char return_value;
+  do {
+    return_value = random(3);
+  } while(return_value == last_state);
+  return return_value;
+}
+
+/*
+ * Returns a random integer between 0 and N-1 (a range of N numbers).
  */
 unsigned char random(unsigned char N) {
   return (rand() % N);
+}
+
+/*
+ * Waits 1 second.
+ */
+void wait_one_second(void) {
+  Counts = 0;
+  while (Counts < 338);
+}
+
+/*
+ * Flash lights green and red while the slide switch is off.
+ */
+void flash_lights(void) {
+  int original_value = Counts;
+  while (1) {
+    light_green();
+    // Wait 0.5 seconds, or return if slide switch is on
+    Counts = 0;
+    while (Counts < 169) {
+      if (CheckSlideSwitch()) {
+        // Turn off the BiLED
+        BILED0 = 1;
+        BILED1 = 1;
+        Counts = original_value;
+        return;
+      }
+    }
+    light_red();
+    // Wait 0.5 seconds, or return if slide switch is on
+    Counts = 0;
+    while (Counts < 169) {
+      if (CheckSlideSwitch()) {
+        // Turn off the BiLED
+        BILED0 = 1;
+        BILED1 = 1;
+        Counts = original_value;
+        return;
+      }
+    }
+  }
+}
+
+/*
+ * Light BiLED green.
+ */
+void light_green(void) {
+  BILED0 = 1;
+  BILED1 = 0;
+}
+
+/*
+ * :Light BiLED red.
+ */
+void light_red(void) {
+  BILED0 = 0;
+  BILED1 = 1;
 }
 
 /*
