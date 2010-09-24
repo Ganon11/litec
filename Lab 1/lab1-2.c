@@ -5,8 +5,7 @@
  * File name: lab1-2.c
  * Description: Play a simple game with the user, involving Timer0,
  * pushbuttons, LEDs, a BiLED, a slide switch, and the microcontroller.
- */
-/*
+ *
  * This program demonstrates the use of T0 interrupts. The code will count the
  * number of T0 timer overflows that occur while a slide switch is in the ON position.
  */
@@ -91,7 +90,9 @@ void main(void) {
     for (i = 0; i < 10; i++) {
       // Each for loop execution represents one turn
       // This code 'pauses' the game while the SS is off.
-      flash_lights();
+      if (!CheckSlideSwitch()) {
+        flash_lights();
+      }
 
       switch (turns[i]) {
         case 0:
@@ -121,7 +122,9 @@ void main(void) {
       push1 = CheckPushButton1();
       push2 = CheckPushButton2();
       // This code 'pauses' the game while the SS if off.
-      flash_lights();
+      if (!CheckSlideSwitch()) {
+        flash_lights();
+      }
 
       switch (turns[i]) {
         case 0:
@@ -158,9 +161,6 @@ void main(void) {
           printf("Error: bad turns[%d] value: %d%s", i, turns[i], newline());
       }
     }
-
-    // Turn the timer off.
-    TR0 = 0;
     printf("Total number of correct inputs: %d%s", correct, newline());
     // Wait for user to turn game off
     while (CheckSlideSwitch());
@@ -255,9 +255,6 @@ void flash_lights(void) {
     Counts = 0;
     while (Counts < 169) {
       if (CheckSlideSwitch()) {
-        // Turn off the BiLED
-        BILED0 = 1;
-        BILED1 = 1;
         Counts = original_value;
         return;
       }
@@ -267,9 +264,6 @@ void flash_lights(void) {
     Counts = 0;
     while (Counts < 169) {
       if (CheckSlideSwitch()) {
-        // Turn off the BiLED
-        BILED0 = 1;
-        BILED1 = 1;
         Counts = original_value;
         return;
       }
@@ -289,8 +283,8 @@ void light_green(void) {
  * :Light BiLED red.
  */
 void light_red(void) {
-  BILED0 = 0;
   BILED1 = 1;
+  BILED0 = 0;
 }
 
 /*
