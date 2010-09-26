@@ -68,25 +68,18 @@ void main(void) {
   putchar(' ');    // the quote fonts may not copy correctly into SiLabs IDE
   putchar('\r');
 
-  // ************************************************
-  // BASIC SIMON GAME
-  // ************************************************
-
   // Enable Timer 0
   TR0 = 1;
-
 }
 
 //***************
 void Port_Init(void) {
   // Port 1 Constant Masks
-  unsigned char P1MD1IN &= 0xFD; // 1111 1101, Set P1.1 as an analog input 
-  unsigned char P1MDOUT &= 0xFD; // 1111 1101, Set P1.1 as a input port bit
-  unsigned char P1 |= 0x02 // 0000 0010 Set P1.1 to a high impedance state
-
+  unsigned char P1MDIN_LO = 0xFD; // 1111 1101, Set P1.1 as an analog input 
+  unsigned char P1MDOUT_LO = 0xFD; // 1111 1101, Set P1.1 as a input port bit
+  unsigned char P1_HI = 0x02; // 0000 0010 Set P1.1 to a high impedance state
 
   // Port 2 Constant Masks
-  unsigned char P2MDOUT_HI = 0x00; // 0000 0000 - unused in lab 1
   unsigned char P2MDOUT_LO = 0xFE; // 1111 1110
   unsigned char P2_HI = 0x01; // 0000 0001
   
@@ -94,9 +87,11 @@ void Port_Init(void) {
   unsigned char P3MDOUT_HI = 0xF8; // 1111 1000
   unsigned char P3MDOUT_LO = 0xFC; // 1111 1100
   unsigned char P3_HI = 0x03; // 0000 0011
-  
-  // Set Port 2 MDOUT high bits
-  P2MDOUT |= P2MDOUT_HI; // in lab 1, does nothing
+
+  P1MDIN &= P1MDIN_LO;
+  P1MDOUT &= P1MDOUT_LO;
+  P1 |= P1_HI;
+
   // Set Port 2 MDOUT low bits
   P2MDOUT &= P2MDOUT_LO;
   // Set Port 2 impedence (high) bits
@@ -123,12 +118,14 @@ void Timer_Init(void) {
 	TL0 = 0; // Clear low byte of register T0
 	TH0 = 0; // Clear high byte of register T0
 }
+
 void ADC_Init(void) {
   REF0CN &= 0XF7 // 1111 0111 Configure ADC1 to use VREF
   REF0CN |= 0x03 // 0000 0011
   ADC1CF =0x01 // 0000 0001 Set a gain of 1
   ADC1CN |= 0x80 // 1000 0000 Enable ADC1
 }
+
 void ADC_Test(void) {
   AMX1SL = 0x01; // 0000 0001 Set the Port pin number
   ADC1CN &= 0xDF; // 1101 1111 Clear the flag from the previous ADC1 conversion
@@ -137,6 +134,7 @@ void ADC_Test(void) {
   	P1_1_RESULT = ADC1; //Assign the A/D conversion result
   }
 }
+
 //***************
 void Timer0_ISR(void) interrupt 1 {
   TF0 = 0; // clear interrupt request
