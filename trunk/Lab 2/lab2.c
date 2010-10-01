@@ -2,13 +2,8 @@
  * Names: Michael Stark + David Melecio-Vázquez
  * Section: 4 A
  * Date: 14 September 2010
- * File name: lab1-2.c
- * Description: Play a simple game with the user, involving Timer0,
- * pushbuttons, LEDs, a BiLED, a slide switch, and the microcontroller.
- */
-/*
- * This program demonstrates the use of T0 interrupts. The code will count the
- * number of T0 timer overflows that occur while a slide switch is in the ON position.
+ * File name: lab2.c
+ * Description: Play a game of LITEC Memory with the user.
  */
 
 #include <c8051_SDCC.h>// include files. This file is available online
@@ -41,19 +36,20 @@ int CheckPushButton1(void); // function which checks push button 1
 int CheckPushButton2(void); // function which checks push button 2
 int CheckPushButton3(void); // function which checks push button 3
 int CheckPushButton4(void); // function which checks push button 4
-void PrintInputStatus(int slide, int push1, int push2); // Helper function to print the status of the inputs.
+void PrintInputStatus(int push1, int push2, int push3, int push4); // Helper function to print the status of the inputs.
 char* newline(); // Helper function, used when printing (returns "\r\n")
 
 //-----------------------------------------------------------------------------
 // Global Variables
 //-----------------------------------------------------------------------------
 
-sbit at 0xA0 PB3; // Push button 3, associated with Port 2, Pin 0
-sbit at 0xA1 PB4; // Push button 4, associated with Port 2, Pin 1
-sbit at 0xB0 PB1; // Push button 1, associated with Port 3, Pin 0
-                  // Black PB is PB1
-sbit at 0xB1 PB2; // Push button 2, associated with Port 3 Pin 1
-                  // Red PB is PB2
+// Pushbuttons (Inputs)
+sbit at 0xA0 PB3; // Push button 3, associated with Port 2, Pin 0 (second from left, red PB)
+sbit at 0xA1 PB4; // Push button 4, associated with Port 2, Pin 1 (far left, black PB)
+sbit at 0xA2 PB1; // Push button 1, associated with Port 2, Pin 2 (far right, red PB)
+sbit at 0xA3 PB2; // Push button 2, associated with Port 2, Pin 3 (second from right, black PB)
+
+// LEDs and Buzzer (Outputs)
 sbit at 0xB2 LED2; // LED2, associated with Port 3, Pin 2
 sbit at 0xB3 BILED0; // BILED0, associated with Port 3 Pin 3
 sbit at 0xB4 BILED1; // BILED1, associated with Port 3 Pin 4
@@ -77,6 +73,8 @@ void main(void) {
   // Enable Timer 0
   TR0 = 1;
 
+  while (!CheckPushButton4());
+
   while (1) {
     play_game();
   }
@@ -90,18 +88,21 @@ void Port_Init(void) {
   unsigned char P1_HI = 0x02; // 0000 0010 Set P1.1 to a high impedance state
 
   // Port 2 Constant Masks
-  unsigned char P2MDOUT_LO = 0xFC; // 1111 1100
-  unsigned char P2_HI = 0x03; // 0000 0011
+  unsigned char P2MDOUT_LO = 0xF0; // 1111 0000
+  unsigned char P2_HI = 0x0F; // 0000 1111
   
   // Port 3 Constant Masks
   unsigned char P3MDOUT_HI = 0xFC; // 1111 1100
-  unsigned char P3MDOUT_LO = 0x03; // 0000 0011
-  unsigned char P3_HI = 0xFC; // 1111 1100
 
+  // Set Port 1 analog input bits
   P1MDIN &= P1MDIN_LO;
+  // Set Port 1 output (low) bits
   P1MDOUT &= P1MDOUT_LO;
+  // Set Port 1 impedence (high) bits
   P1 |= P1_HI;
 
+  // Set Port 2 MDOUT high bits
+  // P2MDOUT |= P2MDOUT_HI;
   // Set Port 2 MDOUT low bits
   P2MDOUT &= P2MDOUT_LO;
   // Set Port 2 impedence (high) bits
@@ -110,9 +111,9 @@ void Port_Init(void) {
   // Set Port 3 MDOUT high bits
   P3MDOUT |= P3MDOUT_HI;
   // Set Port 3 MDOUT low bits
-  P3MDOUT &= P3MDOUT_LO;
-  // Set Port 2 impedence (high) bits
-  P3 |= P3_HI;
+  // P3MDOUT &= P3MDOUT_LO;
+  // Set Port 3 impedence (high) bits
+  // P3 |= P3_HI;
 }
 
 void Interrupt_Init(void) {
@@ -130,9 +131,9 @@ void Timer_Init(void) {
 }
 
 void ADC_Init(void) {
-  REF0CN &= 0XF7; // 1111 0111 Configure ADC1 to use VREF
+  REF0CN &= 0xF7; // 1111 0111 Configure ADC1 to use VREF
   REF0CN |= 0x03; // 0000 0011
-  ADC1CF =0x01; // 0000 0001 Set a gain of 1
+  ADC1CF = 0x01; // 0000 0001 Set a gain of 1
   ADC1CN |= 0x80; // 1000 0000 Enable ADC1
 }
 
@@ -374,16 +375,16 @@ void wait_one_second(void) {
  * Light BiLED green.
  */
 void light_green(void) {
-  BILED0 = 1;
-  BILED1 = 0;
+  BILED0 = 0;
+  BILED1 = 1;
 }
 
 /*
  * :Light BiLED red.
  */
 void light_red(void) {
-  BILED0 = 0;
-  BILED1 = 1;
+  BILED0 = 1;
+  BILED1 = 0;
 }
 
 /*
@@ -427,34 +428,37 @@ int CheckPushButton3(void) {
 int CheckPushButton4(void) {
   // !PB4 will evaluate to 0 if PB4 is off, or 1 if PB4 is on.  These are the
   // desired return values, so we'll just return the statement.
-  return !PB2;
+  return !PB4;
 }
 
 /*
  * Prints a message to standard output indicating the status of the Slide
  * switch and Pushbuttons 1 and 2.
  */
-void PrintInputStatus(int slide, int push1, int push2) {
-  // Print the Slide Switch status
-  if (slide) {
-    printf("Slide switch on, ");
-  } else {
-    printf("Slide switch off, ");
-  }
+void PrintInputStatus(int push1, int push2, int push3, int push4) {
+  LED0 = 1;
+  LED1 = 1;
+  LED2 = 1;
+  BILED0 = 1;
+  BILED1 = 1;
+  BUZZER = 1;
 
-  // Print the Pushbuttons status
-  if (push1 && push2) {
-    // Both pushbuttons are pressed.
-    printf("Pushbuttons 1 and 2 activated.");
-  } else if (push1) {
-    // Only pushbutton 1 pressed.
-    printf("Pushbutton 1 activated.");
-  } else if (push2) {
-    // Only pushbutton 2 pressed.
-    printf("Pushbutton 2 activated.");
-  } else {
-    // No pushbuttons pressed.
-    printf("Pushbuttons 1 and 2 not activated.");
+  if (push1) {
+    printf("Pushbutton 1 enabled, ");
+    LED0 = 0;
+  }
+  if (push2) {
+    printf("Pushbutton 2 enabled, ");
+    LED1 = 0;
+  }
+  if (push3) {
+    printf("Pushbutton 3 enabled, ");
+    LED2 = 0;
+  }
+  if (push4) {
+    printf("Pushbutton 4 enabled");
+    light_red();
+    BUZZER = 0;
   }
   printf("%s", newline());
 }
