@@ -187,15 +187,21 @@ void play_game(void) {
 
   light_green();
 
+  correct = 1;
+
   for (i = 0; i < 5; i++) {
     inputs[i] = ReadPushbuttons();
     if (inputs[i] == 3) { // Pushbutton 4 pressed, restart game
       return;
+    } else if (inputs[i] != turns[i]) {
+      correct = 0;
+      printf("Input %d was incorrect!%s", i + 1, newline());
+      break;
+    } else {
+      printf("Input %d was correct!%s", i + 1, newline());
     }
   }
-
-  correct = 1;
-
+/*
   for (i = 0; i < 5; i++) {
     if (turns[i] == inputs[i]) {
       printf("Input %d was correct!%s", i + 1, newline());
@@ -204,7 +210,7 @@ void play_game(void) {
       printf("Input %d was incorrect!%s", i + 1, newline());
     }
   }
-
+*/
   if (correct) {
     // flash LEDs 3 times
     for (i = 0; i < 3; i++) {
@@ -226,6 +232,7 @@ void play_game(void) {
   } else {
     // sounds buzzer for 1.5 seconds
     BUZZER = 0;
+    light_red();
     Counts = 0;
     while (Counts < 506);
     BUZZER = 1; // Turn buzzer back off (thank God)
