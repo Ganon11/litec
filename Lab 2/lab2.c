@@ -201,16 +201,7 @@ void play_game(void) {
       printf("Input %d was correct!%s", i + 1, newline());
     }
   }
-/*
-  for (i = 0; i < 5; i++) {
-    if (turns[i] == inputs[i]) {
-      printf("Input %d was correct!%s", i + 1, newline());
-    } else {
-      correct = 0;
-      printf("Input %d was incorrect!%s", i + 1, newline());
-    }
-  }
-*/
+
   if (correct) {
     // flash LEDs 3 times
     for (i = 0; i < 3; i++) {
