@@ -29,14 +29,12 @@ unsigned char light_LED(unsigned char LED_to_light, short on_time, short off_tim
 unsigned char ReadPushbuttons(); // Wait for a pushbutton event, and return which one was pressed
 unsigned char unique_random(unsigned char last_state); // Generates a random number different from the last one
 unsigned char random(unsigned char N); // Generates a random number between 0 and N-1
-void wait_one_second(void); // Waits 1 second
 void light_green(void); // Light BiLED green
 void light_red(void); // Light BiLED red
 int CheckPushButton1(void); // function which checks push button 1
 int CheckPushButton2(void); // function which checks push button 2
 int CheckPushButton3(void); // function which checks push button 3
 int CheckPushButton4(void); // function which checks push button 4
-void PrintInputStatus(int push1, int push2, int push3, int push4); // Helper function to print the status of the inputs.
 char* newline(); // Helper function, used when printing (returns "\r\n")
 
 //-----------------------------------------------------------------------------
@@ -362,14 +360,6 @@ unsigned char random(unsigned char N) {
 }
 
 /*
- * Waits 1 second.
- */
-void wait_one_second(void) {
-  Counts = 0;
-  while (Counts < 338);
-}
-
-/*
  * Light BiLED green.
  */
 void light_green(void) {
@@ -427,38 +417,6 @@ int CheckPushButton4(void) {
   // !PB4 will evaluate to 0 if PB4 is off, or 1 if PB4 is on.  These are the
   // desired return values, so we'll just return the statement.
   return !PB4;
-}
-
-/*
- * Prints a message to standard output indicating the status of the Slide
- * switch and Pushbuttons 1 and 2.
- */
-void PrintInputStatus(int push1, int push2, int push3, int push4) {
-  LED0 = 1;
-  LED1 = 1;
-  LED2 = 1;
-  BILED0 = 1;
-  BILED1 = 1;
-  BUZZER = 1;
-
-  if (push1) {
-    printf("Pushbutton 1 enabled, ");
-    LED0 = 0;
-  }
-  if (push2) {
-    printf("Pushbutton 2 enabled, ");
-    LED1 = 0;
-  }
-  if (push3) {
-    printf("Pushbutton 3 enabled, ");
-    LED2 = 0;
-  }
-  if (push4) {
-    printf("Pushbutton 4 enabled");
-    light_red();
-    BUZZER = 0;
-  }
-  printf("%s", newline());
 }
 
 /*
