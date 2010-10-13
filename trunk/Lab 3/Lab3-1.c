@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <c8051_SDCC.h>
 
-#define PW_MIN _____
-#define PW_MAX _____
-#define PW_NEUT _____
+#define PW_MIN 2027
+#define PW_NEUT 2764
+#define PW_MAX 3502
 
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
@@ -29,18 +29,18 @@ unsigned int MOTOR_PW = 0;
 void main(void) {
   // initialize board
   Sys_Init();
-  putchar(' '); //the quotes in this line may not format correctly
+  putchar(' '); // the quotes in this line may not format correctly
   Port_Init();
   XBR0_Init();
   PCA_Init();
 
-  //print beginning message
+  // print beginning message
   printf("Embedded Control Drive Motor Control\r\n");
 
-  //set initial value
+  // set initial value
   MOTOR_PW = PW_NEUT;
 
-  //add code to set the servo motor in neutral for one second
+  // add code to set the servo motor in neutral for one second
 
   while(1) {
     Drive_Motor();
@@ -56,14 +56,16 @@ void main(void) {
 //
 void Drive_Motor() {
   char input;
-  //wait for a key to be pressed
+  // wait for a key to be pressed
   input = getchar();
-  if (input == 'f') { //if 'f' is pressed by the user
-    if (MOTOR_PW < PW_MAX)
-      MOTOR_PW = MOTOR_PW + 10; //increase the steering pulsewidth by 10
-  } else if (input == 's') { //if 's' is pressed by the user
-    if (MOTOR_PW > PW_MIN)
-      MOTOR_PW = MOTOR_PW - 10; //decrease the steering pulsewidth by 10
+  if (input == 'f') { // if 'f' is pressed by the user
+    if (MOTOR_PW < PW_MAX) {
+      MOTOR_PW = MOTOR_PW + 10; // increase the steering pulsewidth by 10
+    }
+  } else if (input == 's') { // if 's' is pressed by the user
+    if (MOTOR_PW > PW_MIN) {
+      MOTOR_PW = MOTOR_PW - 10; // decrease the steering pulsewidth by 10
+    }
   }
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
@@ -76,7 +78,7 @@ void Drive_Motor() {
 // Set up ports for input and output
 //
 void Port_Init() {
-  P1MDOUT = ________ ;//set output pin for CEX2 in push-pull mode
+  P1MDOUT = ________ ; // set output pin for CEX2 in push-pull mode
 }
 
 //-----------------------------------------------------------------------------
@@ -96,7 +98,7 @@ void Interrupt_Init() {
 // Set up the crossbar
 //
 void XBR0_Init() {
-  XBR0 = __________ ; //configure crossbar with UART, SPI, SMBus, and CEX channels as in worksheet
+  XBR0 = __________ ; // configure crossbar with UART, SPI, SMBus, and CEX channels as in worksheet
 }
 
 //-----------------------------------------------------------------------------
