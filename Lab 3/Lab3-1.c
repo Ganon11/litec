@@ -86,7 +86,7 @@ void Port_Init() {
 // Set up ports for input and output
 //
 void Interrupt_Init() {
-// IE and EIE1
+  // IE and EIE1
 }
 
 //-----------------------------------------------------------------------------
@@ -108,6 +108,7 @@ void XBR0_Init() {
 void PCA_Init(void) {
   // reference to the sample code in Example 4.5 - Pulse Width Modulation implemented us-ing the PCA (Programmable Counter Array, p. 50 in Lab Manual.
   // Use a 16 bit counter with SYSCLK/12.
+  // WE WILL USE CCM 1!  Felix and Alan will use CCM 0!
 }
 
 //-----------------------------------------------------------------------------
