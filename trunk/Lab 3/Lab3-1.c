@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <c8051_SDCC.h>
 
+#define PCA_COUNTS 36864
 #define PW_MIN 2027
 #define PW_NEUT 2764
 #define PW_MAX 3502
@@ -67,8 +68,8 @@ void Drive_Motor() {
       MOTOR_PW = MOTOR_PW - 10; // decrease the steering pulsewidth by 10
     }
   }
-  PCA0CPL2 = 0xFFFF - MOTOR_PW;
-  PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
+  PCA0CPL1 = 0xFFFF - MOTOR_PW;
+  PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;
 }
 
 //-----------------------------------------------------------------------------
@@ -120,4 +121,6 @@ void PCA_Init(void) {
 // Interrupt Service Routine for Programmable Counter Array Overflow Interrupt
 //
 void PCA_ISR ( void ) interrupt 9 {
+  PCA0L = 0xFFFF - PCA_COUNTS;
+  PCA0H = (0xFFFF - PCA_COUNTS) << 8;
 }
