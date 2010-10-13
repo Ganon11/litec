@@ -14,7 +14,6 @@
  * have an easier time discerning that color.
  */
 
-
 #include<c8051_SDCC.h>
 #include<stdio.h>
 
