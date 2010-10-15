@@ -41,10 +41,15 @@ void main(void) {
 
   // set initial value
   MOTOR_PW = PW_NEUT;
+  printf("MOTOR_PW = %d\r\n", MOTOR_PW);
 
   // add code to set the servo motor in neutral for one second
   Counts = 0; // Counts is incremented once every 20 ms.  1 s = 1000 ms.  1000 / 20 = 50.  Wait 50 counts
-  while (Counts < 50);
+  while (Counts < 50) {
+    printf("Waiting...Counts = %d\r\n", Counts);
+  }
+
+  printf("Done waiting 1 second.\r\n");
 
   while(1) {
     Drive_Motor();
@@ -63,14 +68,19 @@ void Drive_Motor() {
   // wait for a key to be pressed
   input = getchar();
   if (input == 'f') { // if 'f' is pressed by the user
+    printf("You pressed 'f'.  Going faster.\r\n");
     if (MOTOR_PW < PW_MAX) {
       MOTOR_PW = MOTOR_PW + 10; // increase the steering pulsewidth by 10
     }
   } else if (input == 's') { // if 's' is pressed by the user
+    printf("You pressed 's'.  Going slower.\r\n");
     if (MOTOR_PW > PW_MIN) {
       MOTOR_PW = MOTOR_PW - 10; // decrease the steering pulsewidth by 10
     }
+  } else {
+    printf("You pressed '%c'.  Huh?\r\n", input);
   }
+  printf("MOTOR_PW = %d\r\n", MOTOR_PW);
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
 }
@@ -89,7 +99,7 @@ void Port_Init() {
 // Interrupt_Init
 //-----------------------------------------------------------------------------
 //
-// Set up ports for input and output
+// Enable proper interrupts.
 //
 void Interrupt_Init() {
   // IE and EIE1
@@ -129,9 +139,14 @@ void PCA_Init(void) {
 // Interrupt Service Routine for Programmable Counter Array Overflow Interrupt
 //
 void PCA_ISR ( void ) interrupt 9 {
-  // Reset PCA to the correct start value (65,535 - PCA_COUNTS)
-  PCA0L = 0xFFFF - PCA_COUNTS;
-  PCA0H = (0xFFFF - PCA_COUNTS) << 8;
-  // Increment Counts variable (used for waiting for some amount of time)
-  Counts++;
+  if (CF) {
+    printf("INTERRUPT LOLOLOL\r\n");
+    // Reset PCA to the correct start value (65,535 - PCA_COUNTS)
+    PCA0L = 0xFFFF - PCA_COUNTS;
+    PCA0H = (0xFFFF - PCA_COUNTS) << 8;
+    // Increment Counts variable (used for waiting for some amount of time)
+    Counts++;
+  } else {
+    PCA0CN &= 0xC0; // all other type 9 interrupts
+  }
 }
