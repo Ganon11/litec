@@ -23,6 +23,7 @@ void XBR0_Init(void);
 void Interrupt_Init(void);
 void Drive_Motor(void);
 unsigned int MOTOR_PW = 0;
+unsigned int Counts = 0;
 
 //-----------------------------------------------------------------------------
 // Main Function
@@ -42,6 +43,8 @@ void main(void) {
   MOTOR_PW = PW_NEUT;
 
   // add code to set the servo motor in neutral for one second
+  Counts = 0; // Counts is incremented once every 20 ms.  1 s = 1000 ms.  1000 / 20 = 50.  Wait 50 counts
+  while (Counts < 50);
 
   while(1) {
     Drive_Motor();
@@ -68,8 +71,8 @@ void Drive_Motor() {
       MOTOR_PW = MOTOR_PW - 10; // decrease the steering pulsewidth by 10
     }
   }
-  PCA0CPL1 = 0xFFFF - MOTOR_PW;
-  PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;
+  PCA0CPL2 = 0xFFFF - MOTOR_PW;
+  PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
 }
 
 //-----------------------------------------------------------------------------
@@ -79,7 +82,7 @@ void Drive_Motor() {
 // Set up ports for input and output
 //
 void Port_Init() {
-  P1MDOUT = ________ ; // set output pin for CEX2 in push-pull mode
+  P0MDOUT |= 0x40; // set output pin for CEX2 in push-pull mode
 }
 
 //-----------------------------------------------------------------------------
@@ -90,6 +93,8 @@ void Port_Init() {
 //
 void Interrupt_Init() {
   // IE and EIE1
+  EA = 1; // Enable interrupts globally
+  EIE1 |= 0x08; // Enable PCA0 interrupts
 }
 
 //-----------------------------------------------------------------------------
@@ -99,7 +104,7 @@ void Interrupt_Init() {
 // Set up the crossbar
 //
 void XBR0_Init() {
-  XBR0 = __________ ; // configure crossbar with UART, SPI, SMBus, and CEX channels as in worksheet
+  XBR0 = 0x27; // configure crossbar with UART0, SPI, SMBus, and CEX channels as in worksheet
 }
 
 //-----------------------------------------------------------------------------
@@ -109,9 +114,12 @@ void XBR0_Init() {
 // Set up Programmable Counter Array
 //
 void PCA_Init(void) {
-  // reference to the sample code in Example 4.5 - Pulse Width Modulation implemented us-ing the PCA (Programmable Counter Array, p. 50 in Lab Manual.
+  // reference to the sample code in Example 4.5 - Pulse Width Modulation implemented using the PCA (Programmable Counter Array, p. 50 in Lab Manual.
   // Use a 16 bit counter with SYSCLK/12.
-  // WE WILL USE CCM 1!  Felix and Alan will use CCM 0!
+  // WE WILL USE CCM 2!  Felix and Alan will use CCM 0!
+  PCA0MD = 0x81;
+  PCA0CPM2 = 0xC2;
+  PCA0CN |= 0x40;
 }
 
 //-----------------------------------------------------------------------------
@@ -121,6 +129,9 @@ void PCA_Init(void) {
 // Interrupt Service Routine for Programmable Counter Array Overflow Interrupt
 //
 void PCA_ISR ( void ) interrupt 9 {
+  // Reset PCA to the correct start value (65,535 - PCA_COUNTS)
   PCA0L = 0xFFFF - PCA_COUNTS;
   PCA0H = (0xFFFF - PCA_COUNTS) << 8;
+  // Increment Counts variable (used for waiting for some amount of time)
+  Counts++;
 }
