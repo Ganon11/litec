@@ -3,7 +3,7 @@
  * Section: 4 (Side A)
  * Date: 8 October 2010
  * File name: lab3-1.c
- * Program description: Sample code for speed control using PWM.
+ * Program description: Simple code for speed control using PWM.
  */
 
 #include <stdio.h>
