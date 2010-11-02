@@ -140,13 +140,19 @@ void PCA_ISR ( void ) interrupt 9 {
   }
 }
 
+//-----------------------------------------------------------------------------
+// Read_Ranger
+//-----------------------------------------------------------------------------
+//
+// Interrupt Service Routine for Programmable Counter Array Overflow Interrupt
+//
 unsigned int Read_Ranger(void) {
   unsigned char info[2] = {'\0'}; // Space for us to read information from ranger
   unsigned int range = 0; // Inititalize the range value to 0.
   unsigned char addr = 0xE0; // Address of the ranger
 
   i2c_read_data(addr, 2, info, 2); // Read 2 bytes (size of an unsigned int) starting at register 2
-  printf("Got data; first byte %d ('%c'), second byte %d ('%c')\r\n", info[0], info[0], info[1], info[1]);
+//  printf("Got data; first byte %d ('%c'), second byte %d ('%c')\r\n", info[0], info[0], info[1], info[1]);
   range = (((unsigned int)info[0] << 8) | info[1]); // Convert the two bytes of data to one short int
   return range;
 }
