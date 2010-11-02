@@ -43,7 +43,7 @@ void main(void) {
   XBR0_Init();
   PCA_Init();
 
-  printf("Embedded Control Ultrasonic Ranger Test\r\n");
+  printf("\rEmbedded Control Ultrasonic Ranger Test\r\n");
   
   while(1) {
     printf("whileloop");
@@ -135,7 +135,9 @@ unsigned int Read_Ranger(void) {
   unsigned int range = 0;
   unsigned char addr = 0xE0; // Address of the ranger
 
+  printf("Ready to read\r\n");
   i2c_read_data(addr, 2, info, 2); // Read 2 bytes (size of an unsigned int) starting at register 2
+  printf("Reddit\r\n");
   range = (((unsigned int)info[0] << 8) | info[1]);
   return range;
 }
