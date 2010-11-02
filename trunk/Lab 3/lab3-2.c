@@ -16,6 +16,7 @@
 void Port_Init(void);
 void PCA_Init (void);
 void XBR0_Init(void);
+void SMB_Init(void);
 void Interrupt_Init(void);
 unsigned int Read_Ranger(void);
 
@@ -31,24 +32,24 @@ unsigned int PCA_COUNTS = 36864; // number of counts in 20ms
 // Main Function
 //-----------------------------------------------------------------------------
 void main(void) {
-  unsigned char info[1];
-  unsigned char addr = 0xE0;
-  unsigned int range;
-  info[0] = 0x51; // Signal to start a ping and record result in cm
+  unsigned char info[1] = {'\0'}; // Data to write to the ranger
+  unsigned char addr = 0xE0; // Address of the ranger
+  unsigned int range; // Result of the read operation
   // initialize board
-  Sys_Init();
-  putchar(' '); // the quotes in this line may not format correctly
+  Sys_Init(); // Initialize the system
+  putchar(' ');
   Port_Init();
   Interrupt_Init();
   XBR0_Init();
+  SMB_Init();
   PCA_Init();
 
-  printf("\rEmbedded Control Ultrasonic Ranger Test\r\n");
+  printf("\r\nEmbedded Control Ultrasonic Ranger Test\r\n");
+  
+  info[0] = 0x51; // Signal to start a ping and record result in cm
   
   while(1) {
-    printf("whileloop");
     if(new_range) {
-      printf("\r\n\nNOO RAYNGE\r\n\n");
 	    range = Read_Ranger();
     	printf("Range = %d \r\n", range);
       i2c_write_data(addr, 0, info, 1); // Write 1 byte (the ping signal) to register 0
@@ -65,7 +66,6 @@ void main(void) {
 //
 void Port_Init() {
   P1MDOUT |= 0x04; // set output pin for CEX2 in push-pull mode
-  P0MDOUT |= 0xC0; // set output pins (2 of them) for SDA(P0.6) & SCL(P0.7) in push-pull mode 
 }
 
 //-----------------------------------------------------------------------------
@@ -89,7 +89,17 @@ void Interrupt_Init() {
 void XBR0_Init() {
                // 0001 1111
   XBR0 = 0x27; // configure crossbar with UART0, SPI, SMBus, and CEX channels as in worksheet 7
-  
+}
+
+//-----------------------------------------------------------------------------
+// SMB_Init
+//-----------------------------------------------------------------------------
+//
+// Set up the system bus
+//
+void SMB_Init(void) {
+  SMB0CR = 0x93; // set SCL to use 100 kHz
+  ENSMB = 1; // Bit 6 of SMB0CN.  Enables the system bus.
 }
 
 //-----------------------------------------------------------------------------
@@ -131,13 +141,12 @@ void PCA_ISR ( void ) interrupt 9 {
 }
 
 unsigned int Read_Ranger(void) {
-  unsigned char info[2];
-  unsigned int range = 0;
+  unsigned char info[2] = {'\0'}; // Space for us to read information from ranger
+  unsigned int range = 0; // Inititalize the range value to 0.
   unsigned char addr = 0xE0; // Address of the ranger
 
-  printf("Ready to read\r\n");
   i2c_read_data(addr, 2, info, 2); // Read 2 bytes (size of an unsigned int) starting at register 2
-  printf("Reddit\r\n");
-  range = (((unsigned int)info[0] << 8) | info[1]);
+  printf("Got data; first byte %d ('%c'), second byte %d ('%c')\r\n", info[0], info[0], info[1], info[1]);
+  range = (((unsigned int)info[0] << 8) | info[1]); // Convert the two bytes of data to one short int
   return range;
 }
