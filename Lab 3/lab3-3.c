@@ -10,42 +10,44 @@
 #include <c8051_SDCC.h>
 #include <i2c.h>
 
-#define PW_MIN 2027
-#define PW_NEUT 2764
-#define PW_MAX 3502
+#define PW_MIN 2027 // 1.1 ms pulsewidth
+#define PW_NEUT 2764 // 1.5 ms pulsewidth
+#define PW_MAX 3502 // 1.9 ms pulsewidth
 
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
 //-----------------------------------------------------------------------------
-void Port_Init(void);
-void Interrupt_Init(void);
-void XBR0_Init(void);
-void SMB_Init(void);
-void PCA_Init (void);
+void Port_Init(void); // Initialize input/output ports.
+void Interrupt_Init(void); // Set up PCA0 interrupts.
+void XBR0_Init(void); // Initialize crossbar.
+void SMB_Init(void); // Initialize system bus.
+void PCA_Init (void); // Initialize the PCA counter.
 
 //-----------------------------------------------------------------------------
 // Our functions
 //-----------------------------------------------------------------------------
-int Read_Ranger(void);
-void Drive_Motor(int range);
+int Read_Ranger(void); // Read the ultrasonic ranger.
+void Drive_Motor(int range); // Vary the motor PW based on the range in cm.
 
 //-----------------------------------------------------------------------------
 // Global Variables
 //-----------------------------------------------------------------------------
-unsigned int MOTOR_PW = 0;
+unsigned int MOTOR_PW = 0; // Pulsewidth to use.
 unsigned int Counts = 0;  // Number of overflows, used for setting new_range
-unsigned int Overflows = 0; // Number of overflows
+unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
-unsigned int PCA_COUNTS = 36864; // number of counts in 20ms
+unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
 
 //-----------------------------------------------------------------------------
 // Main Function
 //-----------------------------------------------------------------------------
 void main(void) {
-  unsigned char i;
+  unsigned char i = 0; // Index variable for printing range every 400 ms or so.
   unsigned char info[1] = {'\0'}; // Data to write to the ranger
   unsigned char addr = 0xE0; // Address of the ranger
   int range; // Result of the read operation
+
+  // System initialization
   Sys_Init();
   putchar(' ');
   Port_Init();
@@ -57,26 +59,22 @@ void main(void) {
   // print beginning message
   printf("Embedded Control Motor Controlled by Ultrasonic Ranger\r\n");
   
-  info[0] = 0x51; // Signal to start a ping and record result in cm
+  // Signal to start a ping and record result in cm
+  info[0] = 0x51;
 
   // set initial value
   MOTOR_PW = PW_NEUT;
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
 
-  // add code to set the servo motor in neutral for one second
   Overflows = 0; // Overflows is incremented once every 20 ms.  1 s = 1000 ms.  1000 / 20 = 50.  Wait 50 counts
-  printf("Waiting...\r\n");
+  printf("Waiting 1 second...\r\n");
   while (Overflows < 50);
-
   printf("Done waiting 1 second.\r\n");
-  
-  // Some trickery to only print the range every 20 times we read it (a few times per second)
-  i = 0;
 
   while (1) {
     if (new_range) {
-      i++;
+      i++; // This is used for printing the range every 6 times we read a new range, or about every 480 ms
       range = Read_Ranger(); // Read the ultrasonic ranger
       if (i > 5) {
         printf("range read: %d cm\r\n", range);
@@ -154,13 +152,12 @@ void PCA_Init(void) {
 //
 // Interrupt Service Routine for Programmable Counter Array Overflow Interrupt
 //
- int Read_Ranger(void) {
+int Read_Ranger(void) {
   unsigned char info[2] = {'\0'}; // Space for us to read information from ranger
   int range = 0; // Inititalize the range value to 0.
   unsigned char addr = 0xE0; // Address of the ranger
 
   i2c_read_data(addr, 2, info, 2); // Read 2 bytes (size of an unsigned int) starting at register 2
-//  printf("Got data; first byte %d ('%c'), second byte %d ('%c')\r\n", info[0], info[0], info[1], info[1]);
   range = (((int)info[0] << 8) | info[1]); // Convert the two bytes of data to one short int
   return range;
 }
@@ -173,20 +170,19 @@ void PCA_Init(void) {
 // of the drive motor.
 //
 void Drive_Motor(int range) {
-  // Change MOTOR_PW based on the range variable
   if (range >= 40 && range <= 50) { // Range is between 40 and 50 cm
     MOTOR_PW = PW_NEUT;
   } else if (range < 40) { // Set forward speed
     if (range < 10) { // Don't allow range to be less than 10 cm
       range = 10;
     }
-    MOTOR_PW = (((40 - range) * 246) / 10) + PW_NEUT;
+    MOTOR_PW = (((40 - range) * 246) / 10) + PW_NEUT; // Varies linearly based on range between PW_MAX and PW_NEUT
   } else { // Set reverse speed
     if (range > 90) { // Don't allow range to be greater than 90 cm
       range = 90;
     }
 
-    MOTOR_PW = (((50 - range) * 184) / 10) + PW_NEUT;
+    MOTOR_PW = (((50 - range) * 184) / 10) + PW_NEUT; // Varies linearly based on range between PW_MIN and PW_NEUT
   }
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
@@ -203,8 +199,9 @@ void PCA_ISR ( void ) interrupt 9 {
     // Reset PCA to the correct start value (65,535 - PCA_COUNTS)
     PCA0L = 0xFFFF - PCA_COUNTS;
     PCA0H = (0xFFFF - PCA_COUNTS) >> 8;
-    // Increment Counts variable (used for waiting for some amount of time)
+    // Increment Counts variable (used for waiting 80 ms)
     Counts++;
+    // Increment Overflows variable (used for waiting 1 s)
     Overflows++;
     if(Counts >= 4) {
   	  new_range = 1; // signal start of read operation
