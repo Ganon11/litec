@@ -37,6 +37,7 @@ unsigned int Counts = 0;  // Number of overflows, used for setting new_range
 unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
+sbit at 0xB6 SS; // Slide switch controlling the Drive_Motor function
 
 //-----------------------------------------------------------------------------
 // Main Function
@@ -57,7 +58,7 @@ void main(void) {
   PCA_Init();
 
   // print beginning message
-  printf("Embedded Control Motor Controlled by Ultrasonic Ranger\r\n");
+  printf("\rEmbedded Control Motor Controlled by Ultrasonic Ranger\r\n");
   
   // Signal to start a ping and record result in cm
   info[0] = 0x51;
@@ -78,9 +79,14 @@ void main(void) {
       range = Read_Ranger(); // Read the ultrasonic ranger
       if (i > 5) {
         printf("range read: %d cm\r\n", range);
+        printf("SS = %d\r\n", SS);
         i = 0;
       }
-      Drive_Motor(range); // Change the speed based on the range read.
+      if (!SS) {
+        Drive_Motor(range); // Change the speed based on the range read.
+      } else {
+        Drive_Motor(45); // Set the motor to neutral.
+      }
       i2c_write_data(addr, 0, info, 1); // Write the ping signal to register 0 of the ranger
       new_range = 0; // Reset the flag and wait for 80ms
     }
@@ -95,6 +101,8 @@ void main(void) {
 //
 void Port_Init() {
   P1MDOUT |= 0x04; // set output pin for CEX2 in push-pull mode
+  P3MDOUT &= 0xBF; // set input pin P3.6 (Slide switch) in open-drain mode
+  P3 |= 0x40; // Set input pin P3.6 (Slide switch) to high impedance
 }
 
 //-----------------------------------------------------------------------------
@@ -150,7 +158,7 @@ void PCA_Init(void) {
 // Read_Ranger
 //-----------------------------------------------------------------------------
 //
-// Interrupt Service Routine for Programmable Counter Array Overflow Interrupt
+// Reads the latest ping value from the Ultrasonic Ranger, and returns the result.
 //
 int Read_Ranger(void) {
   unsigned char info[2] = {'\0'}; // Space for us to read information from ranger
@@ -204,8 +212,8 @@ void PCA_ISR ( void ) interrupt 9 {
     // Increment Overflows variable (used for waiting 1 s)
     Overflows++;
     if(Counts >= 4) {
-  	  new_range = 1; // signal start of read operation
-	    Counts = 0;  //Reset Counts
+      new_range = 1; // signal start of read operation
+      Counts = 0;  //Reset Counts
   	}
     CF = 0;
   } else {
