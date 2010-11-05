@@ -1,0 +1,10 @@
+Include header files
+
+Start main
+  Initialize system, ports, interrupts, crossbar, and system bus
+  
+  Every 80 ms
+    Read from the ranger and print the range in cm
+    Request a new ping
+  End loop
+End main

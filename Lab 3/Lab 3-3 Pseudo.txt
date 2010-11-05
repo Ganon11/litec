@@ -1,0 +1,21 @@
+// Lab 3-3 Pseudocode
+// Michael Stark and David Melecio-Vazquez
+
+Include header files
+
+Start main
+  Initialize system, ports, interrupts, crossbar, and system bus
+  
+  Set pulsewidth to 1.5 ms
+  Wait 1 second
+  
+  Every 80 ms
+    Read from the ranger
+    Based on the distance read, calculate the new pulsewidth
+      // New pulsewidth is between PW_MIN and PW_MAX.
+      // A low distance (10 - 40 cm) results in high pulsewidth
+      // A high distance (50 - 90 cm) results in low pulsewidth
+      // A medium distance (40 - 50 cm) results in neutral
+    Print the distance read and the pulsewidth calculated
+  End Loop
+End Main

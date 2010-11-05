@@ -1,0 +1,18 @@
+// Lab 3-1 Pseudocode
+// Michael Stark and David Melecio-Vazquez
+
+Import proper header files
+
+Start main()
+  Inititalize system, crossbar, PCA0, and interrupts
+  Set Pulsewidth to 1.5 ms value
+  Wait 1 second
+  Loop Indefinitely
+    Read user input into variable "in"
+    If (in is "f" for "f"aster and we have not reached high limit of 1.9 ms)
+      Increase pulse width
+    Else if (in is "s" for "s"lower and we have not reached low limit of 1.1 ms)
+      Decrease pulse width
+    End If
+  End Loop
+End main()
