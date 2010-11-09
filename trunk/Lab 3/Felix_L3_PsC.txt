@@ -1,0 +1,40 @@
+Lab 3-3 Pseudo-code
+
+Include header files
+Declare functions and global variables
+
+Main
+    Init functions
+    while (1)
+	if slide switch is off
+	    Center pulsewidth (PW_Center) is used as the pulsewidth
+	    print pulsewidth
+	end if
+	else if slide switch is on
+	    print desired heading
+	    heading = (Call Read_Compass function)
+	    Call Steer function
+	end else if
+    end while
+end main
+
+Read_Compass
+    Declare local variables
+    read data into array of chars
+    condense array into one int (heading)
+    print heading
+    return actual heading
+end Read_Compass
+
+Steer
+    Declare local variable k
+    if desired heading > current heading
+	Equation to set pulsewidth (PW)
+    end if
+    else if desired heading < current heading
+	Different equation to set PW
+    end else if
+    print PW
+end Steer Function
+
+Init functions
