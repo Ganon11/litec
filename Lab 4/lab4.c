@@ -15,9 +15,9 @@
 #define DRIVE_PW_NEUT 2764 // 1.5 ms pulsewidth
 #define DRIVE_PW_MAX 3502 // 1.9 ms pulsewidth
 
-#define STEER_PW_MIN 1659
-#define STEER_PW_NEUT 2736
-#define STEER_PW_MAX 3871
+#define STEER_PW_MIN 0xF985
+#define STEER_PW_NEUT 0xF550
+#define STEER_PW_MAX 0xF031
 
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
@@ -27,6 +27,7 @@ void Interrupt_Init(void); // Set up PCA0 interrupts.
 void XBR0_Init(void); // Initialize crossbar.
 void SMB_Init(void); // Initialize system bus.
 void PCA_Init (void); // Initialize the PCA counter.
+void ADC_Init(void); // Initialize A/D Conversion
 
 //-----------------------------------------------------------------------------
 // Motor functions
@@ -38,7 +39,12 @@ void Drive_Motor(int range); // Vary the motor PW based on the range in cm.
 // Steering functions
 //-----------------------------------------------------------------------------
 unsigned int ReadCompass(void); // Read the electronic compass
-void Steer(unsigned int current_heading); // Vary the steering PW based on the heading in degrees.
+void Steer(unsigned int current_heading, unsigned char k); // Vary the steering PW based on the heading in degrees and the gain constant.
+
+//-----------------------------------------------------------------------------
+// Other functions
+//-----------------------------------------------------------------------------
+unsigned char Read_Port_1(void); // Performs A/D Conversion
 
 //-----------------------------------------------------------------------------
 // Global Variables
@@ -64,6 +70,8 @@ void main(void) {
   unsigned char addr = 0xE0; // Address of the ranger
   int range; // Result of the read operation
   unsigned int current_heading; // Heading read by the electronic compass
+  unsigned char steer_gain = 2;
+  char keypad;
 
   // System initialization
   Sys_Init();
@@ -90,18 +98,36 @@ void main(void) {
   while (Overflows < 50);
   printf("Done waiting 1 second.\r\n");
 
+  lcd_clear();
+  lcd_print("Calibration:\nHello world!\n012_345_678:\nabc def ghij");
+  while (1) {
+    keypad = read_keypad();
+    Overflows = 0;
+    while (Overflows < 1); // Pause for 20 ms.
+
+    if (keypad != -1) {  // keypad = -1 if no key is pressed
+                   // Note key bounce resulting in multiple lines on terminal
+                    // A longer delay will reduce multiple keypad reads but a
+                    // better approach is to wait for a -1 between keystrokes.
+      lcd_clear();
+      lcd_print("Your key was:\n %c", keypad);
+      printf("\n\rYour key was: %c", keypad);
+    }
+  }
+
   while (1) {
     if (new_heading) {
       j++; // Used for printing the heading every 10 times we read, or about every 480 ms.
       current_heading = ReadCompass(); // Read the electronic compass
       
-      if (j > 10) {
-        printf("heading read: %d degrees\r\n", current_heading);
+      if (j > 11) {
+        //printf("heading read: %d degrees\r\n", current_heading);
+        //printf("SSS: %d\r\n", SSS);
         j = 0;
       }
       
       if (!SSS) {
-        Steer(current_heading); // Change heading based on the current heading.
+        Steer(current_heading, steer_gain); // Change steering based on the current heading.
       } else {
         // Make the wheels straight
         PCA0CPL0 = 0xFFFF - STEER_PW_NEUT;
@@ -116,7 +142,7 @@ void main(void) {
       range = Read_Ranger(); // Read the ultrasonic ranger
       
       if (i > 5) {
-        printf("range read: %d cm\r\n", range);
+        //printf("range read: %d cm\r\n", range);
         i = 0;
       }
       
@@ -139,8 +165,11 @@ void main(void) {
 // Set up ports for input and output
 //
 void Port_Init() {
+  P1MDIN &= 0x7F; // set P1.7 as an anlog input
   P1MDOUT |= 0x05; // set output pin for CEX2 and CEX0 in push-pull mode
+  P1MDOUT &= 0x7F; // set input pin P1.7 in open-drain mode.
   P3MDOUT &= 0x3F; // set input pins P3.6 and P3.7 (Slide switches) in open-drain mode
+  P1 |= 0x80; // Set input pin P1.7 (A/D) to high impedance.
   P3 |= 0xC0; // Set input pins P3.6 and P3.7 (Slide switches) to high impedance
 }
 
@@ -189,8 +218,22 @@ void PCA_Init(void) {
   // Use a 16 bit counter with SYSCLK/12.
   // WE WILL USE CCM 2!  Felix and Alan will use CCM 0!
   PCA0CN = 0x40;
+  PCA0CPM0 = 0xC2;
   PCA0CPM2 = 0xC2;
   PCA0MD = 0x81;
+}
+
+//-----------------------------------------------------------------------------
+// ADC_Init
+//-----------------------------------------------------------------------------
+//
+// Initialize the analog to digital conversion.
+//
+void ADC_Init(void) {
+  REF0CN &= 0xF7; // 1111 0111 Configure ADC1 to use VREF
+  REF0CN |= 0x03; // 0000 0011
+  ADC1CF = 0x01; // 0000 0001 Set a gain of 1
+  ADC1CN |= 0x80; // 1000 0000 Enable ADC1
 }
 
 //-----------------------------------------------------------------------------
@@ -247,7 +290,6 @@ unsigned int ReadCompass() {
 	unsigned int heading; // the heading returned in degrees between 0 and 3599
 	i2c_read_data(addr, 2, Data, 2); // reads 2 bytes into Data[]
 	heading = (((unsigned int)Data[0] << 8) | Data[1]); //combines the two numbers into degrees accurate to 1/10 of a degree
-	printf("Current heading is %d\r\n", heading); //prints current heading
 	return heading; //return heading (in degrees)
 }
 
@@ -257,8 +299,7 @@ unsigned int ReadCompass() {
 //
 // Fuction to turn the wheels towards desired heading.
 //
-void Steer(unsigned int current_heading) {
-	unsigned int k = 2;
+void Steer(unsigned int current_heading, unsigned char k) {
 	signed int error = desired_heading - current_heading;
 	if (error < -1800) { // If error is too low (car spun around past 1 cycle), add 360 degrees
 		error += 3600;
@@ -272,9 +313,10 @@ void Steer(unsigned int current_heading) {
 		STEER_PW = k*(-error)/3 + STEER_PW_NEUT;
 	}
   
-	printf("Steering Pulsewidth (PW) is %u\r\n\n", STEER_PW); //Prints PW
-	PCA0CPL0 = 0xFFFF - STEER_PW;
-	PCA0CPH0 = (0xFFFF - STEER_PW) >> 8;
+	PCA0CPL0 = STEER_PW;
+	PCA0CPH0 = STEER_PW >> 8;
+
+  printf("STEER_PW = %d\r\n", STEER_PW);
 }
 
 //-----------------------------------------------------------------------------
@@ -306,4 +348,19 @@ void PCA_ISR ( void ) interrupt 9 {
   } else {
     PCA0CN &= 0xC0; // all other type 9 interrupts
   }
+}
+
+//-----------------------------------------------------------------------------
+// Read_Port_1
+//-----------------------------------------------------------------------------
+//
+// Reads the value on Port 1 Pin X, and performs A/D conversion to return a
+// value between 0 and 255.
+//
+unsigned char Read_Port_1(void) {
+  AMX1SL = 0x80; // 1000 0000 Set the Port pin number
+  ADC1CN &= 0xDF; // 1101 1111 Clear the flag from the previous ADC1 conversion
+  ADC1CN |= 0x10; // 0001 0000 Start A/D Conversion
+  while ((ADC1CN & 0x20) == 0x00); // Wait for conversion to be complete
+ 	return ADC1; //Assign the A/D conversion result
 }
