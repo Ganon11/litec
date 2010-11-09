@@ -45,6 +45,7 @@ void Steer(unsigned int current_heading, unsigned char k); // Vary the steering 
 // Other functions
 //-----------------------------------------------------------------------------
 unsigned char Read_Port_1(void); // Performs A/D Conversion
+float ConvertToVoltage(unsigned char battery);
 
 //-----------------------------------------------------------------------------
 // Global Variables
@@ -65,13 +66,14 @@ sbit at 0xB7 SSS; // Slide switch controlling the Steer function.
 // Main Function
 //-----------------------------------------------------------------------------
 void main(void) {
-  unsigned char i = 0, j = 0; // Index variable for printing range every 400 ms or so.
+  unsigned char i = 0, j = 0; // Index variables for printing every 400 ms or so.
   unsigned char info[1] = {'\0'}; // Data to write to the ranger
   unsigned char addr = 0xE0; // Address of the ranger
   int range; // Result of the read operation
   unsigned int current_heading; // Heading read by the electronic compass
-  unsigned char steer_gain = 2;
-  char keypad;
+  unsigned char steer_gain = 2; // k value for steering control
+  char keypad; // result of keypad reading
+  unsigned char battery; // Reading for battery voltage
 
   // System initialization
   Sys_Init();
@@ -81,6 +83,7 @@ void main(void) {
   XBR0_Init();
   SMB_Init();
   PCA_Init();
+  ADC_Init();
 
   // print beginning message
   printf("\rEmbedded Control Motor Controlled by Ultrasonic Ranger\r\n");
@@ -100,22 +103,31 @@ void main(void) {
 
   lcd_clear();
   lcd_print("Calibration:\nHello world!\n012_345_678:\nabc def ghij");
-  while (1) {
-    keypad = read_keypad();
-    Overflows = 0;
-    while (Overflows < 1); // Pause for 20 ms.
+  //while (1) {
+  //  keypad = read_keypad();
+  //  Overflows = 0;
+  //  while (Overflows < 1); // Pause for 20 ms.
 
-    if (keypad != -1) {  // keypad = -1 if no key is pressed
+  //  if (keypad != -1) {  // keypad = -1 if no key is pressed
                    // Note key bounce resulting in multiple lines on terminal
                     // A longer delay will reduce multiple keypad reads but a
                     // better approach is to wait for a -1 between keystrokes.
-      lcd_clear();
-      lcd_print("Your key was:\n %c", keypad);
-      printf("\n\rYour key was: %c", keypad);
-    }
-  }
+  //    lcd_clear();
+  //    lcd_print("Your key was:\n %c", keypad);
+  //    printf("\n\rYour key was: %c", keypad);
+  //  }
+  //}
+  battery = Read_Port_1();
+  printf_fast_f("Battery voltage: %2.1f V\r\n", ConvertToVoltage(battery));
 
+  Overflows = 0;
   while (1) {
+    if (Overflows > 20) {
+      battery = Read_Port_1();
+      printf_fast_f("Battery: %2.1f V\r\n", ConvertToVoltage(battery));
+      Overflows = 0;
+    }
+
     if (new_heading) {
       j++; // Used for printing the heading every 10 times we read, or about every 480 ms.
       current_heading = ReadCompass(); // Read the electronic compass
@@ -363,4 +375,9 @@ unsigned char Read_Port_1(void) {
   ADC1CN |= 0x10; // 0001 0000 Start A/D Conversion
   while ((ADC1CN & 0x20) == 0x00); // Wait for conversion to be complete
  	return ADC1; //Assign the A/D conversion result
+}
+
+float ConvertToVoltage(unsigned char battery) {
+  printf("Received value of %d\r\n", battery);
+  return ((12.0 * battery) / 255.0);
 }
