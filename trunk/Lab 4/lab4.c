@@ -39,13 +39,14 @@ void Drive_Motor(int range); // Vary the motor PW based on the range in cm.
 // Steering functions
 //-----------------------------------------------------------------------------
 unsigned int ReadCompass(void); // Read the electronic compass
-void Steer(unsigned int current_heading, unsigned char k); // Vary the steering PW based on the heading in degrees and the gain constant.
+void Steer(unsigned int current_heading, unsigned int k); // Vary the steering PW based on the heading in degrees and the gain constant.
 
 //-----------------------------------------------------------------------------
 // Other functions
 //-----------------------------------------------------------------------------
 unsigned char Read_Port_1(void); // Performs A/D Conversion
 float ConvertToVoltage(unsigned char battery);
+void LCD_Display(unsigned char battery, unsigned int current_heading, int range);
 
 //-----------------------------------------------------------------------------
 // Global Variables
@@ -53,7 +54,7 @@ float ConvertToVoltage(unsigned char battery);
 unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
 unsigned int STEER_PW = 0; // Pulsewidth to use for the steering motor
 unsigned int D_Counts = 0; // Number of overflows, used for setting new_range
-unsigned int S_Counts = 0; // 
+unsigned int S_Counts = 0; // Number of overflows, used for setting new_heading
 unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned char new_heading = 0; // flag to start new direction reading
@@ -71,7 +72,7 @@ void main(void) {
   unsigned char addr = 0xE0; // Address of the ranger
   int range; // Result of the read operation
   unsigned int current_heading; // Heading read by the electronic compass
-  unsigned char steer_gain = 2; // k value for steering control
+  unsigned int steer_gain = 2; // k value for steering control
   char keypad; // result of keypad reading
   unsigned char battery; // Reading for battery voltage
 
@@ -102,7 +103,6 @@ void main(void) {
   printf("Done waiting 1 second.\r\n");
 
   lcd_clear();
-  lcd_print("Calibration:\nHello world!\n012_345_678:\nabc def ghij");
   //while (1) {
   //  keypad = read_keypad();
   //  Overflows = 0;
@@ -125,6 +125,7 @@ void main(void) {
     if (Overflows > 20) {
       battery = Read_Port_1();
       printf_fast_f("Battery: %2.1f V\r\n", ConvertToVoltage(battery));
+      LCD_Display(battery, current_heading, range);
       Overflows = 0;
     }
 
@@ -133,8 +134,7 @@ void main(void) {
       current_heading = ReadCompass(); // Read the electronic compass
       
       if (j > 11) {
-        //printf("heading read: %d degrees\r\n", current_heading);
-        //printf("SSS: %d\r\n", SSS);
+        printf_fast_f("heading read: %4.1f degrees\r\n", current_heading / 10.0);
         j = 0;
       }
       
@@ -142,8 +142,9 @@ void main(void) {
         Steer(current_heading, steer_gain); // Change steering based on the current heading.
       } else {
         // Make the wheels straight
-        PCA0CPL0 = 0xFFFF - STEER_PW_NEUT;
-        PCA0CPH0 = (0xFFFF - STEER_PW_NEUT) >> 8;
+        STEER_PW = STEER_PW_NEUT;
+        PCA0CPL0 = STEER_PW;
+        PCA0CPH0 = STEER_PW >> 8;
       }
       
       new_heading = 0;
@@ -154,7 +155,7 @@ void main(void) {
       range = Read_Ranger(); // Read the ultrasonic ranger
       
       if (i > 5) {
-        //printf("range read: %d cm\r\n", range);
+        printf("range read: %d cm\r\n", range);
         i = 0;
       }
       
@@ -311,24 +312,21 @@ unsigned int ReadCompass() {
 //
 // Fuction to turn the wheels towards desired heading.
 //
-void Steer(unsigned int current_heading, unsigned char k) {
+void Steer(unsigned int current_heading, unsigned int k) {
 	signed int error = desired_heading - current_heading;
+
 	if (error < -1800) { // If error is too low (car spun around past 1 cycle), add 360 degrees
 		error += 3600;
-	}	else if (error > 1800) { // If error is too high, add 360 degrees
+	}	else if (error > 1800) { // If error is too high, subtract 360 degrees
 		error -= 3600;
 	}
 
-	if (error <= 1800 && error > 0) { // If error is above 0, set PW based off of k factor
-		STEER_PW = STEER_PW_NEUT - k*(error)/3;
-	}	else if (error <= 0 && error >= -1800) { // If error is below 0, set PW based off of k factor
-		STEER_PW = k*(-error)/3 + STEER_PW_NEUT;
-	}
-  
+  STEER_PW = STEER_PW_NEUT - ((k * error) / 3);
+
 	PCA0CPL0 = STEER_PW;
 	PCA0CPH0 = STEER_PW >> 8;
 
-  printf("STEER_PW = %d\r\n", STEER_PW);
+  printf("STEER_PW = %u\r\n", STEER_PW);
 }
 
 //-----------------------------------------------------------------------------
@@ -366,18 +364,28 @@ void PCA_ISR ( void ) interrupt 9 {
 // Read_Port_1
 //-----------------------------------------------------------------------------
 //
-// Reads the value on Port 1 Pin X, and performs A/D conversion to return a
+// Reads the value on Port 1 Pin 7, and performs A/D conversion to return a
 // value between 0 and 255.
 //
 unsigned char Read_Port_1(void) {
-  AMX1SL = 0x80; // 1000 0000 Set the Port pin number
+  AMX1SL = 7; // Set the ADC conversion to read P1.7
   ADC1CN &= 0xDF; // 1101 1111 Clear the flag from the previous ADC1 conversion
   ADC1CN |= 0x10; // 0001 0000 Start A/D Conversion
   while ((ADC1CN & 0x20) == 0x00); // Wait for conversion to be complete
- 	return ADC1; //Assign the A/D conversion result
+ 	return ADC1; // Return the A/D conversion result
 }
 
+//-----------------------------------------------------------------------------
+// ConvertToVoltage
+//-----------------------------------------------------------------------------
+//
+// Converts the battery value fron digital units to voltage (float).
+//
 float ConvertToVoltage(unsigned char battery) {
-  printf("Received value of %d\r\n", battery);
   return ((12.0 * battery) / 255.0);
+}
+
+void LCD_Display(unsigned char battery, unsigned int current_heading, int range) {
+  lcd_clear();
+  lcd_print("Battery: %d V\nHeading: %d\nRange: %d", (battery * 15) / 255, current_heading, range);
 }
