@@ -47,6 +47,8 @@ void Steer(unsigned int current_heading, unsigned int k); // Vary the steering P
 unsigned char Read_Port_1(void); // Performs A/D Conversion
 float ConvertToVoltage(unsigned char battery);
 void LCD_Display(unsigned char battery, unsigned int current_heading, int range);
+unsigned int GetGain(void); // Retrieve the user's input for the steering gain
+unsigned int GetDesiredHeading(void); // Retrieve the user's input for the desired heading
 
 //-----------------------------------------------------------------------------
 // Global Variables
@@ -70,10 +72,9 @@ void main(void) {
   unsigned char i = 0, j = 0; // Index variables for printing every 400 ms or so.
   unsigned char info[1] = {'\0'}; // Data to write to the ranger
   unsigned char addr = 0xE0; // Address of the ranger
-  int range; // Result of the read operation
-  unsigned int current_heading; // Heading read by the electronic compass
+  int range = 0; // Result of the read operation
+  unsigned int current_heading = 0; // Heading read by the electronic compass
   unsigned int steer_gain = 2; // k value for steering control
-  char keypad; // result of keypad reading
   unsigned char battery; // Reading for battery voltage
 
   // System initialization
@@ -103,20 +104,8 @@ void main(void) {
   printf("Done waiting 1 second.\r\n");
 
   lcd_clear();
-  //while (1) {
-  //  keypad = read_keypad();
-  //  Overflows = 0;
-  //  while (Overflows < 1); // Pause for 20 ms.
-
-  //  if (keypad != -1) {  // keypad = -1 if no key is pressed
-                   // Note key bounce resulting in multiple lines on terminal
-                    // A longer delay will reduce multiple keypad reads but a
-                    // better approach is to wait for a -1 between keystrokes.
-  //    lcd_clear();
-  //    lcd_print("Your key was:\n %c", keypad);
-  //    printf("\n\rYour key was: %c", keypad);
-  //  }
-  //}
+  steer_gain = GetGain();
+  desired_heading = GetDesiredHeading();
   battery = Read_Port_1();
   printf_fast_f("Battery voltage: %2.1f V\r\n", ConvertToVoltage(battery));
 
@@ -385,7 +374,78 @@ float ConvertToVoltage(unsigned char battery) {
   return ((12.0 * battery) / 255.0);
 }
 
+//-----------------------------------------------------------------------------
+// LCD_Display
+//-----------------------------------------------------------------------------
+//
+// Displays statistics about the car (battery voltage, current direction, range read)
+//
 void LCD_Display(unsigned char battery, unsigned int current_heading, int range) {
   lcd_clear();
   lcd_print("Battery: %d V\nHeading: %d\nRange: %d", (battery * 15) / 255, current_heading, range);
+}
+
+//-----------------------------------------------------------------------------
+// GetGain
+//-----------------------------------------------------------------------------
+//
+// Using the LCD display and keypad, queries the user to determine the steering gain constant.
+//
+unsigned int GetGain(void) {
+  char keypad;
+  do {
+    lcd_clear();
+    lcd_print("Gain? ");
+    keypad = read_keypad();
+
+    // Continue reading keypad until we get a key pressed.
+    while (keypad == -1) {
+      keypad = read_keypad();
+    }
+
+    // Wait until user releases the keypad
+    while (read_keypad() != -1);
+
+    printf("GetGain(): user hit %c\r\n", keypad);
+  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't want it.
+
+  return (keypad - '0'); // Subtract the value of '0' to get the numeric value between 0 and 9.
+}
+
+//-----------------------------------------------------------------------------
+// GetDesiredHeading
+//-----------------------------------------------------------------------------
+//
+// Using the LCD display and keypad, queries the user to determine the desired heading constant.
+//
+unsigned int GetDesiredHeading(void) {
+  char keypad;
+  do {
+    lcd_clear();
+    lcd_print("Desired heading?\n1) 0 deg 2) 90 deg\n3) 180 deg\n4) 270 deg");
+    keypad = read_keypad();
+
+    // Continue reading keypad until we get a key pressed.
+    while (keypad == -1) {
+      keypad = read_keypad();
+    }
+
+    // Wait until user releases the keypad
+    while (read_keypad() != -1);
+
+    printf("GetDesiredHeading(): user hit %c\r\n", keypad);
+  } while (keypad < '1' || keypad > '4'); // If the user hit * or #, we don't want it.
+
+  switch (keypad) {
+    case '1':
+      return 0;
+    case '2':
+      return 900;
+    case '3':
+      return 1800;
+    case '4':
+      return 2700;
+    default: // This should never happen
+      return 0;
+  }
 }
