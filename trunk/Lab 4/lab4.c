@@ -103,9 +103,12 @@ void main(void) {
   while (Overflows < 50);
   printf("Done waiting 1 second.\r\n");
 
-  lcd_clear();
   steer_gain = GetGain();
   desired_heading = GetDesiredHeading();
+  lcd_clear();
+
+  printf("Gain %d, desired heading %d\r\n", steer_gain, desired_heading);
+
   battery = Read_Port_1();
   printf_fast_f("Battery voltage: %2.1f V\r\n", ConvertToVoltage(battery));
 
@@ -382,7 +385,7 @@ float ConvertToVoltage(unsigned char battery) {
 //
 void LCD_Display(unsigned char battery, unsigned int current_heading, int range) {
   lcd_clear();
-  lcd_print("Battery: %d V\nHeading: %d\nRange: %d", (battery * 15) / 255, current_heading, range);
+  lcd_print("Battery: %d V\nHeading: %d\nRange: %d cm", (battery * 12) / 255, current_heading, range);
 }
 
 //-----------------------------------------------------------------------------
@@ -392,23 +395,32 @@ void LCD_Display(unsigned char battery, unsigned int current_heading, int range)
 // Using the LCD display and keypad, queries the user to determine the steering gain constant.
 //
 unsigned int GetGain(void) {
-  char keypad;
-  do {
-    lcd_clear();
-    lcd_print("Gain? ");
-    keypad = read_keypad();
+  char keypad, temp;
+//  printf("GetGain()\r\n");
 
-    // Continue reading keypad until we get a key pressed.
-    while (keypad == -1) {
+  lcd_clear();
+  lcd_print("Gain? ");
+
+  do {
+    do {
       keypad = read_keypad();
-    }
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (keypad == -1);
+//    printf ("  read %c\r\n", keypad);
+
+    Overflows = 0;
+    while (Overflows < 1);
 
     // Wait until user releases the keypad
-    while (read_keypad() != -1);
-
-    printf("GetGain(): user hit %c\r\n", keypad);
+    do {
+      temp = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (temp != -1);
   } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't want it.
 
+//  printf("GetGain() returning %d\r\n", keypad - '0');
   return (keypad - '0'); // Subtract the value of '0' to get the numeric value between 0 and 9.
 }
 
@@ -419,22 +431,32 @@ unsigned int GetGain(void) {
 // Using the LCD display and keypad, queries the user to determine the desired heading constant.
 //
 unsigned int GetDesiredHeading(void) {
-  char keypad;
-  do {
-    lcd_clear();
-    lcd_print("Desired heading?\n1) 0 deg 2) 90 deg\n3) 180 deg\n4) 270 deg");
-    keypad = read_keypad();
+  char keypad, temp;
+//  printf("GetDesiredHeading()\r\n");
 
-    // Continue reading keypad until we get a key pressed.
-    while (keypad == -1) {
+  lcd_clear();
+  lcd_print("Desired heading?\n1) 0 deg 2) 90 deg\n3) 180 deg\n4) 270 deg");
+
+  do {
+    do {
       keypad = read_keypad();
-    }
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (keypad == -1);
+//    printf ("  read %c\r\n", keypad);
+
+    Overflows = 0;
+    while (Overflows < 1);
 
     // Wait until user releases the keypad
-    while (read_keypad() != -1);
+    do {
+      temp = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (temp != -1);
+  } while (keypad < '1' || keypad > '4'); // Restrict input to 1, 2, 3, or 4
 
-    printf("GetDesiredHeading(): user hit %c\r\n", keypad);
-  } while (keypad < '1' || keypad > '4'); // If the user hit * or #, we don't want it.
+//  printf("GetDesiredHeading(): user hit %c\r\n", keypad);
 
   switch (keypad) {
     case '1':
