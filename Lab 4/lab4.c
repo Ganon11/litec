@@ -38,8 +38,8 @@ void Drive_Motor(int range); // Vary the motor PW based on the range in cm.
 //-----------------------------------------------------------------------------
 // Steering functions
 //-----------------------------------------------------------------------------
-unsigned int ReadCompass(void); // Read the electronic compass
-void Steer(unsigned int current_heading, unsigned int k); // Vary the steering PW based on the heading in degrees and the gain constant.
+int ReadCompass(void); // Read the electronic compass
+void Steer(int current_heading, unsigned int k); // Vary the steering PW based on the heading in degrees and the gain constant.
 
 //-----------------------------------------------------------------------------
 // Other functions
@@ -54,14 +54,14 @@ unsigned int GetDesiredHeading(void); // Retrieve the user's input for the desir
 // Global Variables
 //-----------------------------------------------------------------------------
 unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
-unsigned int STEER_PW = 0; // Pulsewidth to use for the steering motor
+signed int STEER_PW = 0; // Pulsewidth to use for the steering motor
 unsigned int D_Counts = 0; // Number of overflows, used for setting new_range
 unsigned int S_Counts = 0; // Number of overflows, used for setting new_heading
 unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned char new_heading = 0; // flag to start new direction reading
 unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
-unsigned int desired_heading = 2700; // Desired direction
+int desired_heading = 2700; // Desired direction
 sbit at 0xB6 DSS; // Slide switch controlling the Drive_Motor function
 sbit at 0xB7 SSS; // Slide switch controlling the Steer function.
 
@@ -73,7 +73,7 @@ void main(void) {
   unsigned char info[1] = {'\0'}; // Data to write to the ranger
   unsigned char addr = 0xE0; // Address of the ranger
   int range = 0; // Result of the read operation
-  unsigned int current_heading = 0; // Heading read by the electronic compass
+  int current_heading = 0; // Heading read by the electronic compass
   unsigned int steer_gain = 2; // k value for steering control
   unsigned char battery; // Reading for battery voltage
 
@@ -289,12 +289,12 @@ void Drive_Motor(int range) {
 //
 // Fuction to read the electronic compass.
 //
-unsigned int ReadCompass() {
+signed int ReadCompass() {
 	unsigned char addr = 0xC0; // address of the sensor
 	unsigned char Data[2]; // array with length of 2
-	unsigned int heading; // the heading returned in degrees between 0 and 3599
+	signed int heading; // the heading returned in degrees between 0 and 3599
 	i2c_read_data(addr, 2, Data, 2); // reads 2 bytes into Data[]
-	heading = (((unsigned int)Data[0] << 8) | Data[1]); //combines the two numbers into degrees accurate to 1/10 of a degree
+	heading = (((signed int)Data[0] << 8) | Data[1]); //combines the two numbers into degrees accurate to 1/10 of a degree
 	return heading; //return heading (in degrees)
 }
 
@@ -304,8 +304,8 @@ unsigned int ReadCompass() {
 //
 // Fuction to turn the wheels towards desired heading.
 //
-void Steer(unsigned int current_heading, unsigned int k) {
-	signed int error = desired_heading - current_heading;
+void Steer(int current_heading, unsigned int k) {
+	signed int error = (signed int)((signed int)desired_heading - (signed int)current_heading);
 
 	if (error < -1800) { // If error is too low (car spun around past 1 cycle), add 360 degrees
 		error += 3600;
@@ -313,12 +313,10 @@ void Steer(unsigned int current_heading, unsigned int k) {
 		error -= 3600;
 	}
 
-  STEER_PW = STEER_PW_NEUT - ((k * error) / 3);
+  STEER_PW = STEER_PW_NEUT - (((int)k * error) / 3);
 
 	PCA0CPL0 = STEER_PW;
 	PCA0CPH0 = STEER_PW >> 8;
-
-  printf("STEER_PW = %u\r\n", STEER_PW);
 }
 
 //-----------------------------------------------------------------------------
