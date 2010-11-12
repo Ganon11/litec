@@ -383,7 +383,7 @@ float ConvertToVoltage(unsigned char battery) {
 //
 void LCD_Display(unsigned char battery, unsigned int current_heading, int range) {
   lcd_clear();
-  lcd_print("Battery: %d V\nHeading: %d\nRange: %d cm", (battery * 12) / 255, current_heading, range);
+  lcd_print("Battery: %d V\nHeading: %d\nRange: %d cm", (battery * 15) / 255, current_heading, range);
 }
 
 //-----------------------------------------------------------------------------
