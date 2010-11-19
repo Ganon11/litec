@@ -41,9 +41,9 @@ void Thrust_Fans(int range); // Vary the thrust fans PW based on the range in
 // Steering functions
 //-----------------------------------------------------------------------------
 int ReadCompass(void); // Read the electronic compass
-void Steer(int current_heading, unsigned int k); // Vary the steering PW based
-                                                 // on the heading in degrees
-                                                 // and the gain constant.
+
+// Vary the steering PW based on the heading in degrees and the gain constants.
+void Steer(int current_heading, unsigned int kp, unsigned int kd);
 
 //-----------------------------------------------------------------------------
 // Other functions
@@ -137,24 +137,14 @@ void main(void) {
       battery = Read_Port_1();
       printf("%u\t%u\t%u\t%u", desired_heading, current_heading,
              DESIRED_HEIGHT, range);
-      LCD_Display(battery, current_heading, range);
       Overflows = 0;
     }
 
     if (new_heading) {
-      j++; // Used for printing the heading every 10 times we read, or about
-           // every 480 ms.
       current_heading = ReadCompass(); // Read the electronic compass
       
-      if (j > 11) {
-        printf_fast_f("heading read: %4.1f degrees\r\n",
-                      current_heading / 10.0);
-        j = 0;
-      }
-      
       if (!SSS) {
-        Steer(current_heading, heading_p_gain); // Change steering based on the
-                                            // current heading.
+        Steer(current_heading, heading_p_gain, heading_d_gain);
       } else {
         // Make the wheels straight
         STEER_PW = STEER_PW_NEUT;
@@ -166,19 +156,12 @@ void main(void) {
     }
     
     if (new_range) {
-      i++; // This is used for printing the range every 6 times we read a new
-           // range, or about every 480 ms
       range = Read_Ranger(); // Read the ultrasonic ranger
-      
-      if (i > 5) {
-        printf("range read: %d cm\r\n", range);
-        i = 0;
-      }
       
       if (!DSS) {
         Thrust_Fans(range); // Change the speed based on the range read.
       } else {
-        Thrust_Fans(45); // Set the motor to neutral.
+        Thrust_Fans(DESIRED_HEIGHT); // Set the motor to neutral.
       }
       
       i2c_write_data(addr, 0, info, 1); // Write the ping signal to register 0
@@ -335,9 +318,9 @@ signed int ReadCompass() {
 // Steer
 //-----------------------------------------------------------------------------
 //
-// Fuction to turn the wheels towards desired heading.
+// Function to turn the wheels towards desired heading.
 //
-void Steer(int current_heading, unsigned int k) {
+void Steer(int current_heading, unsigned int kp, unsigned int kd) {
 	signed int error = (signed int)((signed int)desired_heading -
       (signed int)current_heading);
 
@@ -348,7 +331,7 @@ void Steer(int current_heading, unsigned int k) {
 		error -= 3600;
 	}
 
-  STEER_PW = STEER_PW_NEUT - (((int)k * error) / 3);
+  STEER_PW = STEER_PW_NEUT - (((int)kp * error) / 3);
 
 	PCA0CPL0 = STEER_PW;
 	PCA0CPH0 = STEER_PW >> 8;
