@@ -1,14 +1,15 @@
 unsigned int error;
-unsigned int prev_error = -(error);				//Maybe not necessary
+unsigned int prev_error = 0;
 
 void function ()
 {
 	error = desired_range - current_range;
-	prev_error = 0;
 	
 	MOTOR_PW = (((50 - range)*184)/10) + THRUST_PW_NEUT;
 	
 	MOTOR_PW += (error - prev_error)/Counts;	//The important part********************
+	
+	prev_error = error;
 	
 	if (MOTOR_PW >= THRUST_PW_MAX)
 	{
