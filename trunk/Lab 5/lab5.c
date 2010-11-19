@@ -10,13 +10,13 @@
 #include <c8051_SDCC.h>
 #include <i2c.h>
 
-#define DRIVE_PW_MIN 2027 // 1.1 ms pulsewidth
-#define DRIVE_PW_NEUT 2764 // 1.5 ms pulsewidth
-#define DRIVE_PW_MAX 3502 // 1.9 ms pulsewidth
+#define THRUST_PW_MIN 2027 // 1.1 ms pulsewidth
+#define THRUST_PW_NEUT 2764 // 1.5 ms pulsewidth
+#define THRUST_PW_MAX 3502 // 1.9 ms pulsewidth
 
-#define STEER_PW_MIN 0xF985
-#define STEER_PW_NEUT 0xF550
-#define STEER_PW_MAX 0xF031
+#define STEER_PW_MIN 0xF830
+#define STEER_PW_NEUT 0xF542
+#define STEER_PW_MAX 0xF254
 
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
@@ -29,7 +29,7 @@ void PCA_Init (void); // Initialize the PCA counter.
 void ADC_Init(void); // Initialize A/D Conversion
 
 //-----------------------------------------------------------------------------
-// Motor functions
+// Thrust functions
 //-----------------------------------------------------------------------------
 int Read_Ranger(void); // Read the ultrasonic ranger.
 void Thrust_Fans(int range); // Vary the thrust fans PW based on the range in
@@ -98,7 +98,7 @@ void main(void) {
   info[0] = 0x51;
 
   // set initial value
-  MOTOR_PW = DRIVE_PW_NEUT;
+  MOTOR_PW = THRUST_PW_NEUT;
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
 
@@ -280,20 +280,20 @@ int Read_Ranger(void) {
 //
 void Thrust_Fans(int range) {
   if (range >= 40 && range <= 50) { // Range is between 40 and 50 cm
-    MOTOR_PW = DRIVE_PW_NEUT;
+    MOTOR_PW = THRUST_PW_NEUT;
   } else if (range < 40) { // Set forward speed
     if (range < 10) { // Don't allow range to be less than 10 cm
       range = 10;
     }
-    MOTOR_PW = (((40 - range) * 246) / 10) + DRIVE_PW_NEUT; // Varies linearly
-        // based on range between DRIVE_PW_MAX and DRIVE_PW_NEUT
+    MOTOR_PW = (((40 - range) * 246) / 10) + THRUST_PW_NEUT; // Varies linearly
+        // based on range between THRUST_PW_MAX and THRUST_PW_NEUT
   } else { // Set reverse speed
     if (range > 90) { // Don't allow range to be greater than 90 cm
       range = 90;
     }
 
-    MOTOR_PW = (((50 - range) * 184) / 10) + DRIVE_PW_NEUT; // Varies linearly
-        // based on range between DRIVE_PW_MIN and DRIVE_PW_NEUT
+    MOTOR_PW = (((50 - range) * 184) / 10) + THRUST_PW_NEUT; // Varies linearly
+        // based on range between THRUST_PW_MIN and THRUST_PW_NEUT
   }
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
