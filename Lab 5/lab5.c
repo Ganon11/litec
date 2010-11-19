@@ -14,11 +14,13 @@
 #define THRUST_PW_NEUT 2764 // 1.5 ms pulsewidth
 #define THRUST_PW_MAX 3502 // 1.9 ms pulsewidth
 
-#define STEER_PW_MIN 0xF830
-#define STEER_PW_NEUT 0xF542
-#define STEER_PW_MAX 0xF254
+#define STEER_PW_MIN 2000
+#define STEER_PW_NEUT 2750
+#define STEER_PW_MAX 3500
 
 #define DESIRED_HEIGHT 50 // Desire a height of 50 cm.
+
+#define MAX_LEN 5
 
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
@@ -43,15 +45,15 @@ void Thrust_Fans(int range); // Vary the thrust fans PW based on the range in
 int ReadCompass(void); // Read the electronic compass
 
 // Vary the steering PW based on the heading in degrees and the gain constants.
-void Steer(int current_heading, unsigned int kp, unsigned int kd);
+signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
+           signed int prev_error);
 
 //-----------------------------------------------------------------------------
 // Other functions
 //-----------------------------------------------------------------------------
 unsigned char Read_Port_1(void); // Performs A/D Conversion
 float ConvertToVoltage(unsigned char battery);
-void LCD_Display(unsigned char battery, unsigned int current_heading,
-                 int range);
+void LCD_Display(unsigned int current_heading, int range);
 unsigned int GetHeadingPGain(void); // Retrieve the user's input for the
                                     // proportional steering gain
 unsigned int GetHeadingDGain(void); // Retrieve the user's input for the
@@ -63,35 +65,41 @@ unsigned int GetPowerDGain(void); // Retrieve the user's input for the
 unsigned int GetDesiredHeading(void); // Retrieve the user's input for the
                                       // desired heading
 
+int atoi(char *buf); // Converts a string of characters to the equivalent
+                              // integer, or -1 if invalid.
+
 //-----------------------------------------------------------------------------
 // Global Variables
 //-----------------------------------------------------------------------------
 unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
 signed int STEER_PW = 0; // Pulsewidth to use for the steering motor
-unsigned int D_Counts = 0; // Number of overflows, used for setting new_range
-unsigned int S_Counts = 0; // Number of overflows, used for setting new_heading
+unsigned char D_Counts = 0; // Number of overflows, used for setting new_range
+unsigned char S_Counts = 0; // Number of overflows, used for setting new_heading
 unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned char new_heading = 0; // flag to start new direction reading
 unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
-int desired_heading = 2700; // Desired direction
 sbit at 0xB6 DSS; // Slide switch controlling the Thrust_Fans function
 sbit at 0xB7 SSS; // Slide switch controlling the Steer function.
+
+//-----------------------------------------------------------------------------
+// XData Constants
+//-----------------------------------------------------------------------------
+xdata int desired_heading; // Desired direction
+xdata unsigned int heading_p_gain; // Proportional gain constant for steering.
+xdata unsigned int heading_d_gain; // Derivative gain constant for steering.
+xdata unsigned int thrust_p_gain; // Proportional gain constant for power.
+xdata unsigned int thrust_d_gain; // Derivative gain constant for power.
 
 //-----------------------------------------------------------------------------
 // Main Function
 //-----------------------------------------------------------------------------
 void main(void) {
-  unsigned char i = 0, j = 0; // Index variables for printing every 400 ms.
   unsigned char info[1] = {'\0'}; // Data to write to the ranger
   unsigned char addr = 0xE0; // Address of the ranger
   int range = 0; // Result of the read operation
   int current_heading = 0; // Heading read by the electronic compass
-  unsigned int heading_p_gain; // Proportional gain constant for steering.
-  unsigned int heading_d_gain; // Derivative gain constant for steering.
-  unsigned int thrust_p_gain; // Proportional gain constant for power.
-  unsigned int thrust_d_gain; // Derivative gain constant for power.
-  unsigned char battery; // Reading for battery voltage
+  signed int prev_error = 0;
 
   // System initialization
   Sys_Init();
@@ -128,15 +136,14 @@ void main(void) {
 
   lcd_clear();
 
-  battery = Read_Port_1();
-  printf_fast_f("Battery voltage: %2.1f V\r\n", ConvertToVoltage(battery));
 
   Overflows = 0;
   while (1) {
     if (Overflows > 20) {
-      battery = Read_Port_1();
-      printf("%u\t%u\t%u\t%u", desired_heading, current_heading,
+//      battery = Read_Port_1();
+      printf("%u\t%u\t%u\t%u\r\n", desired_heading, current_heading,
              DESIRED_HEIGHT, range);
+      LCD_Display(current_heading, range);
       Overflows = 0;
     }
 
@@ -144,7 +151,8 @@ void main(void) {
       current_heading = ReadCompass(); // Read the electronic compass
       
       if (!SSS) {
-        Steer(current_heading, heading_p_gain, heading_d_gain);
+        prev_error = Steer(current_heading, heading_p_gain, heading_d_gain,
+                           prev_error);
       } else {
         // Make the wheels straight
         STEER_PW = STEER_PW_NEUT;
@@ -178,12 +186,12 @@ void main(void) {
 // Set up ports for input and output
 //
 void Port_Init() {
-  P1MDIN &= 0x7F; // set P1.7 as an anlog input
-  P1MDOUT |= 0x05; // set output pin for CEX2 and CEX0 in push-pull mode
-  P1MDOUT &= 0x7F; // set input pin P1.7 in open-drain mode.
+  P1MDIN &= 0xDF; // set P1.5 as an anlog input
+  P1MDOUT |= 0x0F; // set output pin for CEX0 through 4 in push-pull mode
+  P1MDOUT &= 0xDF; // set input pin P1.7 in open-drain mode.
   P3MDOUT &= 0x3F; // set input pins P3.6 and P3.7 (Slide switches) in
                    // open-drain mode
-  P1 |= 0x80; // Set input pin P1.7 (A/D) to high impedance.
+  P1 |= 0x20; // Set input pin P1.7 (A/D) to high impedance.
   P3 |= 0xC0; // Set input pins P3.6 and P3.7 (Slide switches) to high
               // impedance
 }
@@ -320,7 +328,9 @@ signed int ReadCompass() {
 //
 // Function to turn the wheels towards desired heading.
 //
-void Steer(int current_heading, unsigned int kp, unsigned int kd) {
+signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
+           signed int prev_error) {
+  signed int delta_error;
 	signed int error = (signed int)((signed int)desired_heading -
       (signed int)current_heading);
 
@@ -331,10 +341,22 @@ void Steer(int current_heading, unsigned int kp, unsigned int kd) {
 		error -= 3600;
 	}
 
-  STEER_PW = STEER_PW_NEUT - (((int)kp * error) / 3);
+  delta_error = error - prev_error;
 
-	PCA0CPL0 = STEER_PW;
-	PCA0CPH0 = STEER_PW >> 8;
+  STEER_PW = STEER_PW_NEUT + (((int)kp * error) / 10) + (((int)kd * (delta_error / 40)) / 10);
+//  printf("current heading = %d, kp = %u, kd = %u, prev_error = %d, error = %d, OLD_STEER_PW = %u, ", current_heading, kp, kd, prev_error, error, STEER_PW);
+
+  if (STEER_PW < STEER_PW_MIN) { 
+    STEER_PW = STEER_PW_MIN;
+  } else if (STEER_PW > STEER_PW_MAX) {
+    STEER_PW = STEER_PW_MAX;
+  }
+
+//  printf("NEW_STEER_PW = %u\r\n", STEER_PW);
+	PCA0CPL0 = 0xFFFF - STEER_PW;
+	PCA0CPH0 = (0xFFFF - STEER_PW) >> 8;
+
+  return error;
 }
 
 //-----------------------------------------------------------------------------
@@ -399,11 +421,9 @@ float ConvertToVoltage(unsigned char battery) {
 //
 // Displays statistics about the car.
 //
-void LCD_Display(unsigned char battery, unsigned int current_heading,
-                 int range) {
+void LCD_Display(unsigned int current_heading, int range) {
   lcd_clear();
-  lcd_print("Battery: %d V\nHeading: %d\nRange: %d cm",
-            (battery * 15) / 255, current_heading, range);
+  lcd_print("Heading: %d\nRange: %d cm\n", current_heading, range);
 }
 
 //-----------------------------------------------------------------------------
@@ -414,31 +434,41 @@ void LCD_Display(unsigned char battery, unsigned int current_heading,
 // proportional steering gain constant.
 //
 unsigned int GetHeadingPGain(void) {
-  char keypad, temp;
+  char keypad, i = 0, buf[MAX_LEN];
+  buf[MAX_LEN - 1] = '\0';
 
   lcd_clear();
   lcd_print("Heading P. Gain? ");
-
-  do {
+  while (1) {
     do {
       keypad = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
     } while (keypad == -1);
 
-    Overflows = 0;
-    while (Overflows < 1);
-
     // Wait until user releases the keypad
     do {
-      temp = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
-    } while (temp != -1);
-  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
-                                          // want it.
+    } while (read_keypad() != -1);
 
-  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+    printf("keypad == '%c'\r\n", keypad);
+    
+    // keypad now holds 1 character.
+    if (keypad == '*' || keypad == '#') {
+      buf[i] = '\0';
+      break;
+    }
+    buf[i] = keypad;
+    i++;
+
+    if (i == MAX_LEN - 1) {
+      break;
+    }
+  }
+
+  printf("Got Heading P Gain \"%s\"\r\n", buf);
+  return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
 
@@ -450,31 +480,41 @@ unsigned int GetHeadingPGain(void) {
 // derivative steering gain constant.
 //
 unsigned int GetHeadingDGain(void) {
-  char keypad, temp;
+  char keypad, i = 0, buf[MAX_LEN];
+  buf[MAX_LEN - 1] = '\0';
 
   lcd_clear();
   lcd_print("Heading D. Gain? ");
-
-  do {
+  while (1) {
     do {
       keypad = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
     } while (keypad == -1);
 
-    Overflows = 0;
-    while (Overflows < 1);
-
     // Wait until user releases the keypad
     do {
-      temp = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
-    } while (temp != -1);
-  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
-                                          // want it.
+    } while (read_keypad() != -1);
 
-  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+    printf("keypad == '%c'\r\n", keypad);
+    
+    // keypad now holds 1 character.
+    if (keypad == '*' || keypad == '#') {
+      buf[i] = '\0';
+      break;
+    }
+    buf[i] = keypad;
+    i++;
+
+    if (i == MAX_LEN - 1) {
+      break;
+    }
+  }
+
+  printf("Got Heading D Gain \"%s\"\r\n", buf);
+  return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
 
@@ -486,31 +526,41 @@ unsigned int GetHeadingDGain(void) {
 // proportional power gain constant.
 //
 unsigned int GetPowerPGain(void) {
-  char keypad, temp;
+  char keypad, i = 0, buf[MAX_LEN];
+  buf[MAX_LEN - 1] = '\0';
 
   lcd_clear();
   lcd_print("Power P. Gain? ");
-
-  do {
+  while (1) {
     do {
       keypad = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
     } while (keypad == -1);
 
-    Overflows = 0;
-    while (Overflows < 1);
-
     // Wait until user releases the keypad
     do {
-      temp = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
-    } while (temp != -1);
-  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
-                                          // want it.
+    } while (read_keypad() != -1);
 
-  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+    printf("keypad == '%c'\r\n", keypad);
+    
+    // keypad now holds 1 character.
+    if (keypad == '*' || keypad == '#') {
+      buf[i] = '\0';
+      break;
+    }
+    buf[i] = keypad;
+    i++;
+
+    if (i == MAX_LEN - 1) {
+      break;
+    }
+  }
+
+  printf("Got Power P Gain \"%s\"\r\n", buf);
+  return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
 
@@ -522,31 +572,41 @@ unsigned int GetPowerPGain(void) {
 // derivative power gain constant.
 //
 unsigned int GetPowerDGain(void) {
-  char keypad, temp;
+  char keypad, i = 0, buf[MAX_LEN];
+  buf[MAX_LEN - 1] = '\0';
 
   lcd_clear();
   lcd_print("Power D. Gain? ");
-
-  do {
+  while (1) {
     do {
       keypad = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
     } while (keypad == -1);
 
-    Overflows = 0;
-    while (Overflows < 1);
-
     // Wait until user releases the keypad
     do {
-      temp = read_keypad();
       Overflows = 0;
       while (Overflows < 1);
-    } while (temp != -1);
-  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
-                                          // want it.
+    } while (read_keypad() != -1);
 
-  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+    printf("keypad == '%c'\r\n", keypad);
+    
+    // keypad now holds 1 character.
+    if (keypad == '*' || keypad == '#') {
+      buf[i] = '\0';
+      break;
+    }
+    buf[i] = keypad;
+    i++;
+
+    if (i == MAX_LEN - 1) {
+      break;
+    }
+  }
+
+  printf("Got Power D Gain \"%s\"\r\n", buf);
+  return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
 
@@ -597,4 +657,24 @@ unsigned int GetDesiredHeading(void) {
     default: // This should never happen
       return 0;
   }
+}
+
+
+//-----------------------------------------------------------------------------
+// atoi
+//-----------------------------------------------------------------------------
+//
+// Converts an array of number characters to the equivalent number.
+//
+int atoi(char *buf) {
+  int sum = 0;
+  char i = 0;
+  if (buf == NULL) return 0;
+  while (buf[i]) {
+    sum *= 10;
+    if (buf[i] < '0' || buf[i] > '9') return 0;
+    sum += buf[i] - '0';
+    i++;
+  }
+  return sum;
 }
