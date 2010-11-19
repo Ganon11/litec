@@ -18,6 +18,8 @@
 #define STEER_PW_NEUT 0xF542
 #define STEER_PW_MAX 0xF254
 
+#define DESIRED_HEIGHT 50 // Desire a height of 50 cm.
+
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
 //-----------------------------------------------------------------------------
@@ -50,7 +52,14 @@ unsigned char Read_Port_1(void); // Performs A/D Conversion
 float ConvertToVoltage(unsigned char battery);
 void LCD_Display(unsigned char battery, unsigned int current_heading,
                  int range);
-unsigned int GetGain(void); // Retrieve the user's input for the steering gain
+unsigned int GetHeadingPGain(void); // Retrieve the user's input for the
+                                    // proportional steering gain
+unsigned int GetHeadingDGain(void); // Retrieve the user's input for the
+                                    // derivative steering gain
+unsigned int GetPowerPGain(void); // Retrieve the user's input for the
+                                    // proportional power gain
+unsigned int GetPowerDGain(void); // Retrieve the user's input for the
+                                    // derivative power gain
 unsigned int GetDesiredHeading(void); // Retrieve the user's input for the
                                       // desired heading
 
@@ -78,7 +87,10 @@ void main(void) {
   unsigned char addr = 0xE0; // Address of the ranger
   int range = 0; // Result of the read operation
   int current_heading = 0; // Heading read by the electronic compass
-  unsigned int steer_gain = 2; // k value for steering control
+  unsigned int heading_p_gain; // Proportional gain constant for steering.
+  unsigned int heading_d_gain; // Derivative gain constant for steering.
+  unsigned int thrust_p_gain; // Proportional gain constant for power.
+  unsigned int thrust_d_gain; // Derivative gain constant for power.
   unsigned char battery; // Reading for battery voltage
 
   // System initialization
@@ -108,11 +120,13 @@ void main(void) {
   while (Overflows < 50);
   printf("Done waiting 1 second.\r\n");
 
-  steer_gain = GetGain();
   desired_heading = GetDesiredHeading();
-  lcd_clear();
+  heading_p_gain = GetHeadingPGain();
+  heading_d_gain = GetHeadingDGain();
+  thrust_p_gain = GetPowerPGain();
+  thrust_d_gain = GetPowerDGain();
 
-  printf("Gain %d, desired heading %d\r\n", steer_gain, desired_heading);
+  lcd_clear();
 
   battery = Read_Port_1();
   printf_fast_f("Battery voltage: %2.1f V\r\n", ConvertToVoltage(battery));
@@ -121,7 +135,8 @@ void main(void) {
   while (1) {
     if (Overflows > 20) {
       battery = Read_Port_1();
-      printf_fast_f("Battery: %2.1f V\r\n", ConvertToVoltage(battery));
+      printf("%u\t%u\t%u\t%u", desired_heading, current_heading,
+             DESIRED_HEIGHT, range);
       LCD_Display(battery, current_heading, range);
       Overflows = 0;
     }
@@ -138,7 +153,7 @@ void main(void) {
       }
       
       if (!SSS) {
-        Steer(current_heading, steer_gain); // Change steering based on the
+        Steer(current_heading, heading_p_gain); // Change steering based on the
                                             // current heading.
       } else {
         // Make the wheels straight
@@ -409,17 +424,125 @@ void LCD_Display(unsigned char battery, unsigned int current_heading,
 }
 
 //-----------------------------------------------------------------------------
-// GetGain
+// GetHeadingPGain
 //-----------------------------------------------------------------------------
 //
-// Using the LCD display and keypad, queries the user to determine the steering
-// gain constant.
+// Using the LCD display and keypad, queries the user to determine the
+// proportional steering gain constant.
 //
-unsigned int GetGain(void) {
+unsigned int GetHeadingPGain(void) {
   char keypad, temp;
 
   lcd_clear();
-  lcd_print("Gain? ");
+  lcd_print("Heading P. Gain? ");
+
+  do {
+    do {
+      keypad = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (keypad == -1);
+
+    Overflows = 0;
+    while (Overflows < 1);
+
+    // Wait until user releases the keypad
+    do {
+      temp = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (temp != -1);
+  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
+                                          // want it.
+
+  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+                         // between 0 and 9.
+}
+
+//-----------------------------------------------------------------------------
+// GetHeadingDGain
+//-----------------------------------------------------------------------------
+//
+// Using the LCD display and keypad, queries the user to determine the
+// derivative steering gain constant.
+//
+unsigned int GetHeadingDGain(void) {
+  char keypad, temp;
+
+  lcd_clear();
+  lcd_print("Heading D. Gain? ");
+
+  do {
+    do {
+      keypad = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (keypad == -1);
+
+    Overflows = 0;
+    while (Overflows < 1);
+
+    // Wait until user releases the keypad
+    do {
+      temp = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (temp != -1);
+  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
+                                          // want it.
+
+  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+                         // between 0 and 9.
+}
+
+//-----------------------------------------------------------------------------
+// GetPowerPGain
+//-----------------------------------------------------------------------------
+//
+// Using the LCD display and keypad, queries the user to determine the
+// proportional power gain constant.
+//
+unsigned int GetPowerPGain(void) {
+  char keypad, temp;
+
+  lcd_clear();
+  lcd_print("Power P. Gain? ");
+
+  do {
+    do {
+      keypad = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (keypad == -1);
+
+    Overflows = 0;
+    while (Overflows < 1);
+
+    // Wait until user releases the keypad
+    do {
+      temp = read_keypad();
+      Overflows = 0;
+      while (Overflows < 1);
+    } while (temp != -1);
+  } while (keypad < '1' || keypad > '9'); // If the user hit * or #, we don't
+                                          // want it.
+
+  return (keypad - '0'); // Subtract the value of '0' to get the numeric value
+                         // between 0 and 9.
+}
+
+//-----------------------------------------------------------------------------
+// GetPowerDGain
+//-----------------------------------------------------------------------------
+//
+// Using the LCD display and keypad, queries the user to determine the 
+// derivative power gain constant.
+//
+unsigned int GetPowerDGain(void) {
+  char keypad, temp;
+
+  lcd_clear();
+  lcd_print("Power D. Gain? ");
 
   do {
     do {
