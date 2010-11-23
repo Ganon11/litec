@@ -54,7 +54,7 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
 unsigned char Read_Port_1(void); // Performs A/D Conversion
 float ConvertToVoltage(unsigned char battery);
 void LCD_Display(unsigned int current_heading, int range);
-unsigned int GetHeadingPGain(void); // Retrieve the user's input for the
+unsigned int GetHeadingPGain(void);	// Retrieve the user's input for the
                                     // proportional steering gain
 unsigned int GetHeadingDGain(void); // Retrieve the user's input for the
                                     // derivative steering gain
@@ -291,16 +291,22 @@ void Thrust_Fans(int range) {
     if (range < 10) { // Don't allow range to be less than 10 cm
       range = 10;
     }
-    MOTOR_PW = (((40 - range) * 246) / 10) + THRUST_PW_NEUT; // Varies linearly
+    MOTOR_PW = (((40 - range) * 246) / 10) + THRUST_PW_NEUT; 
+	MOTOR_PW += (error - prev_error)/D_Counts;
+		// Varies linearly
         // based on range between THRUST_PW_MAX and THRUST_PW_NEUT
   } else { // Set reverse speed
     if (range > 90) { // Don't allow range to be greater than 90 cm
       range = 90;
     }
 
-    MOTOR_PW = (((50 - range) * 184) / 10) + THRUST_PW_NEUT; // Varies linearly
+    MOTOR_PW = (((50 - range) * 184) / 10) + THRUST_PW_NEUT;
+	MOTOR_PW += (error - prev_error)/D_Counts;
+		// Varies linearly
         // based on range between THRUST_PW_MIN and THRUST_PW_NEUT
   }
+  
+  D_Counts = 0;
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
 }
