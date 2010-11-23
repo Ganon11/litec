@@ -79,6 +79,7 @@ unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned char new_heading = 0; // flag to start new direction reading
 unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
+unsigned int prev_range = 0;	 // desines the previous range vaiable
 sbit at 0xB6 DSS; // Slide switch controlling the Thrust_Fans function
 sbit at 0xB7 SSS; // Slide switch controlling the Steer function.
 
@@ -112,7 +113,7 @@ void main(void) {
   ADC_Init();
 
   // print beginning message
-  printf("\rEmbedded Control Motor Controlled by Ultrasonic Ranger\r\n");
+  printf("\rEmbedded Control Gondola Control\r\n");
   
   // Signal to start a ping and record result in cm
   info[0] = 0x51;
@@ -124,6 +125,9 @@ void main(void) {
 
   Overflows = 0; // Overflows is incremented once every 20 ms.  1 s = 1000 ms.
                  // 1000 / 20 = 50.  Wait 50 counts
+
+  lcd_clear();
+
   printf("Waiting 1 second...\r\n");
   while (Overflows < 50);
   printf("Done waiting 1 second.\r\n");
@@ -292,7 +296,7 @@ void Thrust_Fans(int range) {
       range = 10;
     }
     MOTOR_PW = (((40 - range) * 246) / 10) + THRUST_PW_NEUT; 
-	MOTOR_PW += (error - prev_error)/D_Counts;
+	MOTOR_PW += (range - prev_range)/D_Counts;
 		// Varies linearly
         // based on range between THRUST_PW_MAX and THRUST_PW_NEUT
   } else { // Set reverse speed
@@ -301,11 +305,12 @@ void Thrust_Fans(int range) {
     }
 
     MOTOR_PW = (((50 - range) * 184) / 10) + THRUST_PW_NEUT;
-	MOTOR_PW += (error - prev_error)/D_Counts;
+	MOTOR_PW += (range - prev_range)/D_Counts;
 		// Varies linearly
         // based on range between THRUST_PW_MIN and THRUST_PW_NEUT
   }
   
+  prev_range = range;
   D_Counts = 0;
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
