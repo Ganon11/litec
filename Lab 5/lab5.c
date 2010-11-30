@@ -36,8 +36,9 @@ void ADC_Init(void); // Initialize A/D Conversion
 // Thrust functions
 //-----------------------------------------------------------------------------
 int Read_Ranger(void); // Read the ultrasonic ranger.
-void Thrust_Fans(int range); // Vary the thrust fans PW based on the range in
-                             // cm.
+int Thrust_Fans(int range, unsigned int kp, unsigned int kd,
+                signed int prev_error); // Vary the thrust fans PW based on the
+                                        // range in cm.
 
 //-----------------------------------------------------------------------------
 // Steering functions
@@ -54,6 +55,7 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
 unsigned char Read_Port_1(void); // Performs A/D Conversion
 float ConvertToVoltage(unsigned char battery);
 void LCD_Display(unsigned int current_heading, int range);
+
 unsigned int GetHeadingPGain(void);	// Retrieve the user's input for the
                                     // proportional steering gain
 unsigned int GetHeadingDGain(void); // Retrieve the user's input for the
@@ -64,7 +66,6 @@ unsigned int GetPowerDGain(void); // Retrieve the user's input for the
                                     // derivative power gain
 unsigned int GetDesiredHeading(void); // Retrieve the user's input for the
                                       // desired heading
-
 int atoi(char *buf); // Converts a string of characters to the equivalent
                               // integer, or -1 if invalid.
 
@@ -72,14 +73,12 @@ int atoi(char *buf); // Converts a string of characters to the equivalent
 // Global Variables
 //-----------------------------------------------------------------------------
 unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
-signed int STEER_PW = 0; // Pulsewidth to use for the steering motor
+unsigned int STEER_PW = 0; // Pulsewidth to use for the steering motor
 unsigned char D_Counts = 0; // Number of overflows, used for setting new_range
 unsigned char S_Counts = 0; // Number of overflows, used for setting new_heading
 unsigned char Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned char new_heading = 0; // flag to start new direction reading
-unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
-unsigned int prev_range = 0;	 // desines the previous range vaiable
 sbit at 0xB6 DSS; // Slide switch controlling the Thrust_Fans function
 sbit at 0xB7 SSS; // Slide switch controlling the Steer function.
 
@@ -91,16 +90,17 @@ xdata unsigned int heading_p_gain; // Proportional gain constant for steering.
 xdata unsigned int heading_d_gain; // Derivative gain constant for steering.
 xdata unsigned int thrust_p_gain; // Proportional gain constant for power.
 xdata unsigned int thrust_d_gain; // Derivative gain constant for power.
+xdata unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
+xdata unsigned char info[1] = { 0x51 };
 
 //-----------------------------------------------------------------------------
 // Main Function
 //-----------------------------------------------------------------------------
 void main(void) {
-  unsigned char info[1]; // Data to write to the ranger
-  unsigned char addr = 0xE0; // Address of the ranger
   int range = 0; // Result of the read operation
   int current_heading = 0; // Heading read by the electronic compass
-  signed int prev_error = 0;
+  signed int steer_prev_error = 0;
+  signed int thrust_prev_error = 0;
 
   // System initialization
   Sys_Init();
@@ -114,9 +114,8 @@ void main(void) {
 
   // print beginning message
   printf("\rEmbedded Control Gondola Control\r\n");
-  
-  // Signal to start a ping and record result in cm
-  info[0] = 0x51;
+
+  lcd_clear();
 
   // set initial value
   MOTOR_PW = THRUST_PW_NEUT;
@@ -125,8 +124,6 @@ void main(void) {
 
   Overflows = 0; // Overflows is incremented once every 20 ms.  1 s = 1000 ms.
                  // 1000 / 20 = 50.  Wait 50 counts
-
-  lcd_clear();
 
   printf("Waiting 1 second...\r\n");
   while (Overflows < 50);
@@ -154,8 +151,8 @@ void main(void) {
       current_heading = ReadCompass(); // Read the electronic compass
       
       if (!SSS) {
-        prev_error = Steer(current_heading, heading_p_gain, heading_d_gain,
-                           prev_error);
+        steer_prev_error = Steer(current_heading, heading_p_gain, heading_d_gain,
+                                 steer_prev_error);
       } else {
         // Make the wheels straight
         STEER_PW = STEER_PW_NEUT;
@@ -170,12 +167,15 @@ void main(void) {
       range = Read_Ranger(); // Read the ultrasonic ranger
       
       if (!DSS) {
-        Thrust_Fans(range); // Change the speed based on the range read.
+        thrust_prev_error = Thrust_Fans(range, thrust_p_gain, thrust_d_gain,
+                                        thrust_prev_error); // Change the speed
+                                                            // based on the
+                                                            // range read.
       } else {
-        Thrust_Fans(DESIRED_HEIGHT); // Set the motor to neutral.
+        Thrust_Fans(DESIRED_HEIGHT, thrust_p_gain, thrust_d_gain, 0); // Set the motor to neutral.
       }
       
-      i2c_write_data(addr, 0, info, 1); // Write the ping signal to register 0
+      i2c_write_data(0xE0, 0, info, 1); // Write the ping signal to register 0
                                         // of the ranger
       new_range = 0; // Reset the flag and wait for 80ms
     }
@@ -287,32 +287,20 @@ int Read_Ranger(void) {
 // Vary the pulsewidth based on the user input to change the speed
 // of the drive motor.
 //
-void Thrust_Fans(int range) {
-  if (range >= 40 && range <= 50) { // Range is between 40 and 50 cm
-    MOTOR_PW = THRUST_PW_NEUT;
-  } else if (range < 40) { // Set forward speed
-    if (range < 10) { // Don't allow range to be less than 10 cm
-      range = 10;
-    }
-    MOTOR_PW = (((40 - range) * 246) / 10) + THRUST_PW_NEUT; 
-	MOTOR_PW += (range - prev_range)/D_Counts;
-		// Varies linearly
-        // based on range between THRUST_PW_MAX and THRUST_PW_NEUT
-  } else { // Set reverse speed
-    if (range > 90) { // Don't allow range to be greater than 90 cm
-      range = 90;
-    }
+int Thrust_Fans(int range, unsigned int kp, unsigned int kd, int prev_error) {
+  MOTOR_PW = (((long)(DESIRED_HEIGHT - range) * 184 * (long)kp) / 100) + (long)THRUST_PW_NEUT;
+  MOTOR_PW += ((long)(DESIRED_HEIGHT - range) - (long)prev_error) * (long)kd;
 
-    MOTOR_PW = (((50 - range) * 184) / 10) + THRUST_PW_NEUT;
-	MOTOR_PW += (range - prev_range)/D_Counts;
-		// Varies linearly
-        // based on range between THRUST_PW_MIN and THRUST_PW_NEUT
+  if (MOTOR_PW > THRUST_PW_MAX) {
+    MOTOR_PW = THRUST_PW_MAX;
+  } else if (MOTOR_PW < THRUST_PW_MIN) {
+    MOTOR_PW = THRUST_PW_MIN;
   }
   
-  prev_range = range;
-  D_Counts = 0;
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
+
+  return (DESIRED_HEIGHT - range);
 }
 
 //-----------------------------------------------------------------------------
@@ -322,10 +310,9 @@ void Thrust_Fans(int range) {
 // Fuction to read the electronic compass.
 //
 signed int ReadCompass() {
-	unsigned char addr = 0xC0; // address of the sensor
 	unsigned char Data[2]; // array with length of 2
 	signed int heading; // the heading returned in degrees between 0 and 3599
-	i2c_read_data(addr, 2, Data, 2); // reads 2 bytes into Data[]
+	i2c_read_data(0xC0, 2, Data, 2); // reads 2 bytes into Data[]
 	heading = (((signed int)Data[0] << 8) | Data[1]); // combines the two numbers
                                                     // into degrees accurate to
                                                     // 1/10 of a degree
