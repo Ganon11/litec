@@ -1,0 +1,341 @@
+*version 9.1 379451683
+u 428
+U? 3
+HB? 3
+R? 6
+C? 2
+@libraries
+@analysis
+@targets
+@attributes
+@translators
+a 0 u 13 0 0 0 hln 100 PCBOARDS=PCB
+a 0 u 13 0 0 0 hln 100 PSPICE=PSPICE
+a 0 u 13 0 0 0 hln 100 XILINX=XILINX
+@setup
+unconnectedPins 0
+connectViaLabel 0
+connectViaLocalLabels 0
+NoStim4ExtIFPortsWarnings 1
+AutoGenStim4ExtIFPorts 1
+@index
+pageloc 1 0 5606 
+@status
+c 110:10:30:13:41:42;1291142502
+n 2911 110:10:30:13:38:17;1291142297 e 
+*page 1 0 970 720 iA
+@ports
+port 17 EGND 340 140 h
+port 208 BUBBLE 360 270 u
+port 210 +5V 400 270 h
+port 207 BUBBLE 360 310 h
+port 211 EGND 360 310 h
+port 212 BUBBLE 340 290 d
+port 218 BUBBLE 360 360 u
+port 219 +5V 400 360 h
+port 220 BUBBLE 360 400 h
+port 221 EGND 360 400 h
+port 222 BUBBLE 340 380 d
+port 118 EGND 470 530 h
+port 373 EGND 440 90 h
+port 372 +5V 440 50 h
+a 1 x 3 0 0 0 hcn 100 LABEL=Battery
+port 45 +5V 400 430 h
+port 117 +5V 420 560 h
+port 85 +5V 550 300 h
+port 98 EGND 600 290 h
+port 166 EGND 550 530 h
+@parts
+part 209 r 360 270 h
+a 0 sp 0 0 0 10 hlb 100 PART=r
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 xp 9 0 15 0 hln 100 REFDES=
+part 217 r 360 360 h
+a 0 sp 0 0 0 10 hlb 100 PART=r
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 xp 9 0 15 0 hln 100 REFDES=
+part 362 r 400 50 h
+a 0 sp 0 0 0 10 hlb 100 PART=r
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 u 13 0 15 25 hln 100 VALUE=10k
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 xp 9 0 15 0 hln 100 REFDES=
+part 363 r 400 90 h
+a 0 sp 0 0 0 10 hlb 100 PART=r
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 u 13 0 15 25 hln 100 VALUE=1.8k
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 xp 9 0 15 0 hln 100 REFDES=
+part 5 74365A 420 140 h
+a 0 sp 11 0 40 110 hln 100 PART=74365A
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=DIP16
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 ap 9 0 40 -2 hln 100 REFDES=U1
+a 0 a 0:13 0 0 0 hln 100 PKGREF=U1
+part 46 r 420 440 d
+a 0 sp 0 0 0 10 hlb 100 PART=r
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 u 13 0 15 25 hln 100 VALUE=1.8k
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 xp 9 0 15 0 hln 100 REFDES=
+part 47 r 380 440 d
+a 0 sp 0 0 0 10 hlb 100 PART=r
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 xp 9 0 15 0 hln 100 REFDES=
+a 0 u 13 0 15 25 hln 100 VALUE=1.8k
+part 84 c 550 310 h
+a 0 sp 0 0 0 10 hlb 100 PART=c
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=CK05
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 x 0:13 0 0 0 hln 100 PKGREF=
+a 0 u 13 0 15 25 hln 100 VALUE=10uF
+a 0 xp 9 0 15 0 hln 100 REFDES=
+@conn
+w 112
+s 450 530 470 530 115
+s 450 530 450 570 121
+w 237
+s 480 170 510 170 145
+w 224
+s 340 380 280 380 223
+w 215
+s 340 290 280 290 214
+w 33
+s 420 220 280 220 32
+w 31
+s 420 170 280 170 30
+w 7
+s 420 140 390 140 20
+s 390 140 390 120 15
+s 420 150 370 150 18
+s 370 150 370 120 12
+s 370 120 340 120 14
+s 390 120 370 120 10
+s 340 120 340 140 6
+w 375
+s 400 50 370 50 374
+s 370 50 370 70 376
+s 370 90 400 90 378
+s 370 70 370 90 382
+s 370 70 280 70 380
+w 240
+s 480 220 510 220 141
+w 300
+s 470 350 600 350 77
+s 470 510 470 350 74
+s 440 510 440 570 123
+s 440 510 470 510 269
+s 470 510 600 510 271
+s 420 480 420 510 59
+s 280 510 420 510 199
+s 420 510 440 510 66
+w 49
+s 400 430 380 430 48
+s 380 430 380 440 50
+s 400 430 420 430 52
+s 420 430 420 440 54
+w 110
+s 420 560 420 570 119
+w 414
+s 460 490 460 340 79
+s 430 490 460 490 265
+s 460 490 600 490 360
+s 430 490 430 570 184
+s 380 490 430 490 392
+s 280 490 380 490 191
+s 380 480 380 490 56
+s 460 340 590 340 339
+s 580 310 590 310 92
+s 580 310 580 280 99
+s 600 280 600 290 233
+s 580 280 600 280 101
+s 590 340 600 340 427
+s 590 310 590 340 94
+w 174
+s 550 380 600 380 90
+s 550 380 550 480 413
+s 550 310 550 380 316
+s 550 300 550 310 86
+s 550 480 600 480 189
+w 131
+s 550 530 600 530 130
+@junction
+j 360 270
++ p 209 1
++ s 208
+j 400 270
++ p 209 2
++ s 210
+j 360 360
++ p 217 1
++ s 218
+j 400 360
++ p 217 2
++ s 219
+j 360 310
++ s 207
++ s 211
+j 360 400
++ s 220
++ s 221
+j 470 530
++ s 118
++ w 112
+j 480 170
++ p 5 Y1
++ w 237
+j 480 220
++ p 5 Y6
++ w 240
+j 340 380
++ s 222
++ w 224
+j 340 290
++ s 212
++ w 215
+j 420 220
++ p 5 A6
++ w 33
+j 420 170
++ p 5 A1
++ w 31
+j 420 140
++ p 5 \G\1
++ w 7
+j 420 150
++ p 5 \G\2
++ w 7
+j 370 120
++ w 7
++ w 7
+j 340 140
++ s 17
++ w 7
+j 470 510
++ w 300
++ w 300
+j 460 490
++ w 414
++ w 414
+j 440 50
++ s 372
++ p 362 2
+j 440 90
++ s 373
++ p 363 2
+j 400 50
++ p 362 1
++ w 375
+j 400 90
++ p 363 1
++ w 375
+j 370 70
++ w 375
++ w 375
+j 420 480
++ p 46 2
++ w 300
+j 440 510
++ w 300
++ w 300
+j 420 510
++ w 300
++ w 300
+j 430 490
++ w 414
++ w 414
+j 380 480
++ p 47 2
++ w 414
+j 380 490
++ w 414
++ w 414
+j 400 430
++ s 45
++ w 49
+j 380 440
++ p 47 1
++ w 49
+j 420 440
++ p 46 1
++ w 49
+j 420 560
++ s 117
++ w 110
+j 550 310
++ p 84 1
++ w 174
+j 550 380
++ w 174
++ w 174
+j 550 300
++ s 85
++ w 174
+j 550 530
++ s 166
++ w 131
+j 580 310
++ p 84 2
++ w 414
+j 600 290
++ s 98
++ w 414
+j 590 340
++ w 414
++ w 414
+@attributes
+a 0 s 0:13 0 0 0 hln 100 PAGETITLE=
+a 0 s 0:13 0 0 0 hln 100 PAGENO=1
+a 0 s 0:13 0 0 0 hln 100 PAGESIZE=A
+a 0 s 0:13 0 0 0 hln 100 PAGECOUNT=1
+@graphics
+r 2 r 0 200 60 280 570
+r 3 r 0 200 60 280 570
+t 4 t 6 270 580 200 60 2700 21 d_info:,,,,,,,,,,,,,24, 
+C8051 Microcontroller
+v 213 v 0 350 290
+360 280
+;
+v 216 v 0 350 380
+360 370
+;
+t 228 t 5 280 515 355 531 0 18
+Port 0 Pin 7 (SCL)
+t 229 t 5 280 475 356 491 0 18
+Port 0 Pin 6 (SDA)
+t 231 t 5 280 155 360 171 0 19
+Port 1 Pin 2 (CEX2)
+t 230 t 5 280 205 360 221 0 19
+Port 1 Pin 0 (CEX0)
+r 139 r 0 510 210 620 260
+t 140 t 5 520 215 583 231 0 14
+Steering Servo
+r 143 r 0 510 100 620 190
+t 144 t 5 520 105 589 121 0 16
+Speed Controller
+r 105 r 0 360 570 550 650
+t 106 t 5 370 575 442 591 0 14
+LCD and Keypad
+t 225 t 5 360 381 280 360 0 18
+Port 3 Pin 6 (DSS)
+t 226 t 5 280 291 360 270 0 18
+Port 3 Pin 7 (SSS)
+t 383 t 5 280 55 332 71 0 12
+Port 1 Pin 7
+r 39 r 0 600 320 640 400
+c 41 c 0 620 340 20
+c 42 c 0 620 380 20
+t 43 t 5 640 315 715 331 0 17
+Ultrasonic Ranger
+r 40 r 0 600 470 670 540
+t 44 t 5 670 465 752 481 0 18
+Electronic Compass
