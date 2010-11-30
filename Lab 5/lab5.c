@@ -112,9 +112,6 @@ void main(void) {
   PCA_Init();
   ADC_Init();
 
-  lcd_clear();
-  lcd_print("Embedded Control\nGondola Control");
-
   // print beginning message
   printf("\rEmbedded Control Gondola Control\r\n");
   
@@ -147,8 +144,7 @@ void main(void) {
   Overflows = 0;
   while (1) {
     if (Overflows > 20) {
-//      battery = Read_Port_1();
-      printf("%u\t%u\t%u\t%u\r\n", desired_heading, current_heading,
+      printf("%u,%u,%u,%u\r\n", desired_heading, current_heading,
              DESIRED_HEIGHT, range);
       LCD_Display(current_heading, range);
       Overflows = 0;
@@ -346,6 +342,7 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
            signed int prev_error) {
 	signed int error = (signed int)((signed int)desired_heading -
       (signed int)current_heading);
+//  printf("current_heading %d, kp %d, kd %d, prev_error %d\r\n", current_heading, kp, kd, prev_error);
 
 	if (error < -1800) { // If error is too low (car spun around past 1 cycle),
                        // add 360 degrees
@@ -354,9 +351,9 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
 		error -= 3600;
 	}
 	
-  STEER_PW = (long)STEER_PW_NEUT + ((long)kp / 10) * (long)error +
-      ((long)kd / 10) * (long)(error - prev_error);
-  printf("current heading = %d, kp = %u, kd = %u, prev_error = %d, error = %d, OLD_STEER_PW = %u, ", current_heading, kp, kd, prev_error, error, STEER_PW);
+  STEER_PW = (long)STEER_PW_NEUT + ((long)kp * (long)error) / 10 +
+      ((long)kd * (long)(error - prev_error));
+//  printf("current heading = %d, kp = %u, kd = %u, prev_error = %d, error = %d, OLD_STEER_PW = %u, ", current_heading, kp, kd, prev_error, error, STEER_PW);
 
   if (STEER_PW < STEER_PW_MIN) { 
     STEER_PW = STEER_PW_MIN;
