@@ -20,7 +20,7 @@
 
 #define DESIRED_HEIGHT 50 // Desire a height of 50 cm.
 
-#define MAX_LEN 5
+#define MAX_LEN 4
 
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
@@ -75,7 +75,7 @@ unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
 signed int STEER_PW = 0; // Pulsewidth to use for the steering motor
 unsigned char D_Counts = 0; // Number of overflows, used for setting new_range
 unsigned char S_Counts = 0; // Number of overflows, used for setting new_heading
-unsigned int Overflows = 0; // Number of overflows, used for waiting 1 second
+unsigned char Overflows = 0; // Number of overflows, used for waiting 1 second
 unsigned char new_range = 0; // flag to start new range reading
 unsigned char new_heading = 0; // flag to start new direction reading
 unsigned int PCA_COUNTS = 36864; // number of counts in 20 ms.  Constant.
@@ -86,7 +86,7 @@ sbit at 0xB7 SSS; // Slide switch controlling the Steer function.
 //-----------------------------------------------------------------------------
 // XData Constants
 //-----------------------------------------------------------------------------
-xdata int desired_heading; // Desired direction
+xdata unsigned int desired_heading; // Desired direction
 xdata unsigned int heading_p_gain; // Proportional gain constant for steering.
 xdata unsigned int heading_d_gain; // Derivative gain constant for steering.
 xdata unsigned int thrust_p_gain; // Proportional gain constant for power.
@@ -96,7 +96,7 @@ xdata unsigned int thrust_d_gain; // Derivative gain constant for power.
 // Main Function
 //-----------------------------------------------------------------------------
 void main(void) {
-  unsigned char info[1] = {'\0'}; // Data to write to the ranger
+  unsigned char info[1]; // Data to write to the ranger
   unsigned char addr = 0xE0; // Address of the ranger
   int range = 0; // Result of the read operation
   int current_heading = 0; // Heading read by the electronic compass
@@ -111,6 +111,9 @@ void main(void) {
   SMB_Init();
   PCA_Init();
   ADC_Init();
+
+  lcd_clear();
+  lcd_print("Embedded Control\nGondola Control");
 
   // print beginning message
   printf("\rEmbedded Control Gondola Control\r\n");
@@ -341,7 +344,6 @@ signed int ReadCompass() {
 //
 signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
            signed int prev_error) {
-  signed int delta_error;
 	signed int error = (signed int)((signed int)desired_heading -
       (signed int)current_heading);
 
@@ -351,11 +353,10 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
 	}	else if (error > 1800) { // If error is too high, subtract 360 degrees
 		error -= 3600;
 	}
-
-  delta_error = error - prev_error;
-
-  STEER_PW = STEER_PW_NEUT + (((int)kp * error) / 10) + (((int)kd * (delta_error / 40)) / 10);
-//  printf("current heading = %d, kp = %u, kd = %u, prev_error = %d, error = %d, OLD_STEER_PW = %u, ", current_heading, kp, kd, prev_error, error, STEER_PW);
+	
+  STEER_PW = (long)STEER_PW_NEUT + ((long)kp / 10) * (long)error +
+      ((long)kd / 10) * (long)(error - prev_error);
+  printf("current heading = %d, kp = %u, kd = %u, prev_error = %d, error = %d, OLD_STEER_PW = %u, ", current_heading, kp, kd, prev_error, error, STEER_PW);
 
   if (STEER_PW < STEER_PW_MIN) { 
     STEER_PW = STEER_PW_MIN;
