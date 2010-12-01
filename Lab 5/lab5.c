@@ -37,9 +37,9 @@ void angle(void); // Set angle of thrust fans
 // Thrust functions
 //-----------------------------------------------------------------------------
 int Read_Ranger(void); // Read the ultrasonic ranger.
+// Vary the thrust fans PW based on the range in cm.
 int Thrust_Fans(int range, unsigned int kp, unsigned int kd,
-                signed int prev_error); // Vary the thrust fans PW based on the
-                                        // range in cm.
+                signed int prev_error);
 
 //-----------------------------------------------------------------------------
 // Steering functions
@@ -62,13 +62,13 @@ unsigned int GetHeadingPGain(void);	// Retrieve the user's input for the
 unsigned int GetHeadingDGain(void); // Retrieve the user's input for the
                                     // derivative steering gain
 unsigned int GetPowerPGain(void); // Retrieve the user's input for the
-                                    // proportional power gain
+                                  // proportional power gain
 unsigned int GetPowerDGain(void); // Retrieve the user's input for the
-                                    // derivative power gain
+                                  // derivative power gain
 unsigned int GetDesiredHeading(void); // Retrieve the user's input for the
                                       // desired heading
 int atoi(char *buf); // Converts a string of characters to the equivalent
-                              // integer, or -1 if invalid.
+                     // integer, or -1 if invalid.
 
 //-----------------------------------------------------------------------------
 // Global Variables
@@ -127,11 +127,10 @@ void main(void) {
   Overflows = 0; // Overflows is incremented once every 20 ms.  1 s = 1000 ms.
                  // 1000 / 20 = 50.  Wait 50 counts
 
-  printf("Waiting 1 second...\r\n");
   while (Overflows < 50);
-  printf("Done waiting 1 second.\r\n");
 
   angle();
+
   desired_heading = GetDesiredHeading();
   heading_p_gain = GetHeadingPGain();
   heading_d_gain = GetHeadingDGain();
@@ -139,7 +138,6 @@ void main(void) {
   thrust_d_gain = GetPowerDGain();
 
   lcd_clear();
-
 
   Overflows = 0;
   while (1) {
@@ -154,8 +152,8 @@ void main(void) {
       current_heading = ReadCompass(); // Read the electronic compass
       
       if (!SSS) {
-        steer_prev_error = Steer(current_heading, heading_p_gain, heading_d_gain,
-                                 steer_prev_error);
+        steer_prev_error = Steer(current_heading, heading_p_gain,
+		                         heading_d_gain, steer_prev_error);
       } else {
         // Make the wheels straight
         STEER_PW = STEER_PW_NEUT;
@@ -170,12 +168,12 @@ void main(void) {
       range = Read_Ranger(); // Read the ultrasonic ranger
       
       if (!DSS) {
+		// Change the thrust based on the range read.
         thrust_prev_error = Thrust_Fans(range, thrust_p_gain, thrust_d_gain,
-                                        thrust_prev_error); // Change the speed
-                                                            // based on the
-                                                            // range read.
+                                        thrust_prev_error);
       } else {
-        Thrust_Fans(DESIRED_HEIGHT, thrust_p_gain, thrust_d_gain, 0); // Set the motor to neutral.
+		// Set the motor to neutral.
+        Thrust_Fans(DESIRED_HEIGHT, thrust_p_gain, thrust_d_gain, 0);
       }
       
       i2c_write_data(0xE0, 0, info, 1); // Write the ping signal to register 0
@@ -223,7 +221,6 @@ void Interrupt_Init() {
 void XBR0_Init() {
                // 0001 1111
   XBR0 = 0x27; // configure crossbar with UART0, SPI, SMBus, and CEX channels
-               // as in worksheet 7
 }
 
 //-----------------------------------------------------------------------------
@@ -246,6 +243,7 @@ void SMB_Init(void) {
 void PCA_Init(void) {
   PCA0CN = 0x40;
   PCA0CPM0 = 0xC2;
+  PCA0CPM1 = 0xC2;
   PCA0CPM2 = 0xC2;
   PCA0MD = 0x81;
 }
@@ -291,8 +289,9 @@ int Read_Ranger(void) {
 // of the drive motor.
 //
 int Thrust_Fans(int range, unsigned int kp, unsigned int kd, int prev_error) {
-  MOTOR_PW = (((long)(DESIRED_HEIGHT - range) * 184 * (long)kp) / 100) + (long)THRUST_PW_NEUT;
-  MOTOR_PW += ((long)(DESIRED_HEIGHT - range) - (long)prev_error) * (long)kd;
+  MOTOR_PW = (long)THRUST_PW_NEUT;
+  MOTOR_PW += (((long)(DESIRED_HEIGHT - range) * 184 * (long)kp) / 100);
+  MOTOR_PW += (((long)(DESIRED_HEIGHT - range) - (long)prev_error) * (long)kd);
 
   if (MOTOR_PW > THRUST_PW_MAX) {
     MOTOR_PW = THRUST_PW_MAX;
@@ -316,9 +315,8 @@ signed int ReadCompass() {
 	unsigned char Data[2]; // array with length of 2
 	signed int heading; // the heading returned in degrees between 0 and 3599
 	i2c_read_data(0xC0, 2, Data, 2); // reads 2 bytes into Data[]
-	heading = (((signed int)Data[0] << 8) | Data[1]); // combines the two numbers
-                                                    // into degrees accurate to
-                                                    // 1/10 of a degree
+	// combines the two numbers into degrees accurate to 1/10 of a degree
+	heading = (((signed int)Data[0] << 8) | Data[1]);
 	return heading; //return heading (in degrees)
 }
 
@@ -329,21 +327,19 @@ signed int ReadCompass() {
 // Function to turn the wheels towards desired heading.
 //
 signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
-           signed int prev_error) {
+                 signed int prev_error) {
 	signed int error = (signed int)((signed int)desired_heading -
-      (signed int)current_heading);
-//  printf("current_heading %d, kp %d, kd %d, prev_error %d\r\n", current_heading, kp, kd, prev_error);
+        (signed int)current_heading);
 
-	if (error < -1800) { // If error is too low (car spun around past 1 cycle),
-                       // add 360 degrees
+	// This keeps the error within the -1800 to 1800 range.
+	if (error < -1800) {
 		error += 3600;
-	}	else if (error > 1800) { // If error is too high, subtract 360 degrees
+	}	else if (error > 1800) {
 		error -= 3600;
 	}
 	
   STEER_PW = (long)STEER_PW_NEUT + ((long)kp * (long)error) / 10 +
       ((long)kd * (long)(error - prev_error));
-//  printf("current heading = %d, kp = %u, kd = %u, prev_error = %d, error = %d, OLD_STEER_PW = %u, ", current_heading, kp, kd, prev_error, error, STEER_PW);
 
   if (STEER_PW < STEER_PW_MIN) { 
     STEER_PW = STEER_PW_MIN;
@@ -351,7 +347,6 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
     STEER_PW = STEER_PW_MAX;
   }
 
-//  printf("NEW_STEER_PW = %u\r\n", STEER_PW);
 	PCA0CPL0 = 0xFFFF - STEER_PW;
 	PCA0CPH0 = (0xFFFF - STEER_PW) >> 8;
 
@@ -422,7 +417,8 @@ float ConvertToVoltage(unsigned char battery) {
 //
 void LCD_Display(unsigned int current_heading, int range) {
   lcd_clear();
-  lcd_print("Heading: %d\nRange: %d cm\n", current_heading, range);
+  lcd_print("Heading: %d\nRange: %d cm\nBattery: %d",
+            current_heading, range, (Read_Port_1() * 15) / 255);
 }
 
 //-----------------------------------------------------------------------------
@@ -450,8 +446,6 @@ unsigned int GetHeadingPGain(void) {
       Overflows = 0;
       while (Overflows < 1);
     } while (read_keypad() != -1);
-
-    printf("keypad == '%c'\r\n", keypad);
     
     // keypad now holds 1 character.
     if (keypad == '*' || keypad == '#') {
@@ -466,7 +460,6 @@ unsigned int GetHeadingPGain(void) {
     }
   }
 
-  printf("Got Heading P Gain \"%s\"\r\n", buf);
   return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
@@ -496,8 +489,6 @@ unsigned int GetHeadingDGain(void) {
       Overflows = 0;
       while (Overflows < 1);
     } while (read_keypad() != -1);
-
-    printf("keypad == '%c'\r\n", keypad);
     
     // keypad now holds 1 character.
     if (keypad == '*' || keypad == '#') {
@@ -512,7 +503,6 @@ unsigned int GetHeadingDGain(void) {
     }
   }
 
-  printf("Got Heading D Gain \"%s\"\r\n", buf);
   return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
@@ -542,8 +532,6 @@ unsigned int GetPowerPGain(void) {
       Overflows = 0;
       while (Overflows < 1);
     } while (read_keypad() != -1);
-
-    printf("keypad == '%c'\r\n", keypad);
     
     // keypad now holds 1 character.
     if (keypad == '*' || keypad == '#') {
@@ -558,7 +546,6 @@ unsigned int GetPowerPGain(void) {
     }
   }
 
-  printf("Got Power P Gain \"%s\"\r\n", buf);
   return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
@@ -588,8 +575,6 @@ unsigned int GetPowerDGain(void) {
       Overflows = 0;
       while (Overflows < 1);
     } while (read_keypad() != -1);
-
-    printf("keypad == '%c'\r\n", keypad);
     
     // keypad now holds 1 character.
     if (keypad == '*' || keypad == '#') {
@@ -604,7 +589,6 @@ unsigned int GetPowerDGain(void) {
     }
   }
 
-  printf("Got Power D Gain \"%s\"\r\n", buf);
   return atoi(buf); // Subtract the value of '0' to get the numeric value
                          // between 0 and 9.
 }
@@ -618,7 +602,6 @@ unsigned int GetPowerDGain(void) {
 //
 unsigned int GetDesiredHeading(void) {
   char keypad, temp;
-//  printf("GetDesiredHeading()\r\n");
 
   lcd_clear();
   lcd_print("Desired heading?\n1) 0 deg 2) 90 deg\n3) 180 deg\n4) 270 deg");
@@ -629,7 +612,6 @@ unsigned int GetDesiredHeading(void) {
       Overflows = 0;
       while (Overflows < 1);
     } while (keypad == -1);
-//    printf ("  read %c\r\n", keypad);
 
     Overflows = 0;
     while (Overflows < 1);
@@ -642,7 +624,6 @@ unsigned int GetDesiredHeading(void) {
     } while (temp != -1);
   } while (keypad < '1' || keypad > '4'); // Restrict input to 1, 2, 3, or 4
 
-//  printf("GetDesiredHeading(): user hit %c\r\n", keypad);
 
   switch (keypad) {
     case '1':
@@ -657,7 +638,6 @@ unsigned int GetDesiredHeading(void) {
       return 0;
   }
 }
-
 
 //-----------------------------------------------------------------------------
 // atoi
@@ -678,6 +658,13 @@ int atoi(char *buf) {
   return sum;
 }
 
+//-----------------------------------------------------------------------------
+// angle
+//-----------------------------------------------------------------------------
+//
+// Using the LCD display and keypad, queries the user to vary the thrust fan
+// angle.
+//
 void angle(void)
 {
 	unsigned char input_angle;
