@@ -31,6 +31,7 @@ void XBR0_Init(void); // Initialize crossbar.
 void SMB_Init(void); // Initialize system bus.
 void PCA_Init (void); // Initialize the PCA counter.
 void ADC_Init(void); // Initialize A/D Conversion
+void angle(void); // Set angle of thrust fans
 
 //-----------------------------------------------------------------------------
 // Thrust functions
@@ -74,6 +75,7 @@ int atoi(char *buf); // Converts a string of characters to the equivalent
 //-----------------------------------------------------------------------------
 unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
 unsigned int STEER_PW = 0; // Pulsewidth to use for the steering motor
+unsigned int Angle_PW = 0; // Pulsewidth to use for the angle of the thrust fans
 unsigned char D_Counts = 0; // Number of overflows, used for setting new_range
 unsigned char S_Counts = 0; // Number of overflows, used for setting new_heading
 unsigned char Overflows = 0; // Number of overflows, used for waiting 1 second
@@ -129,6 +131,7 @@ void main(void) {
   while (Overflows < 50);
   printf("Done waiting 1 second.\r\n");
 
+  angle();
   desired_heading = GetDesiredHeading();
   heading_p_gain = GetHeadingPGain();
   heading_d_gain = GetHeadingDGain();
@@ -673,4 +676,40 @@ int atoi(char *buf) {
     i++;
   }
   return sum;
+}
+
+void angle(void)
+{
+	unsigned char input_angle;
+	printf("Print 1 to turn the fans left, 3 for right, and 2 for done\r\n\n");
+	
+	while (1) {
+		do {
+		input_angle = read_keypad();
+		Overflows = 0;
+		while (Overflows < 1);
+		} while (keypad == -1);
+
+		// Wait until user releases the keypad
+		do {
+		Overflows = 0;
+		while (Overflows < 1);
+		} while (read_keypad() != -1);
+		
+		if (input_angle == '1') {
+			Angle_PW -= 10;
+			printf("1\r\n");
+		}
+		else if (input_andle == '3') {
+			Angle_PW += 10;
+			printf("3\r\n");
+		}
+		else if (input_angle == '2') {
+			printf("2\r\n");
+			break;
+		}
+		
+		PCA0CPL1 = 0xFFFF - MOTOR_PW;
+		PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;
+	}
 }
