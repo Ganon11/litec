@@ -18,6 +18,8 @@
 #define STEER_PW_NEUT 2750
 #define STEER_PW_MAX 3500
 
+#define THRUST_ANGLE_NEUTRAL 3300
+
 #define DESIRED_HEIGHT 50 // Desire a height of 50 cm.
 
 #define MAX_LEN 4
@@ -75,7 +77,6 @@ int atoi(char *buf); // Converts a string of characters to the equivalent
 //-----------------------------------------------------------------------------
 unsigned int MOTOR_PW = 0; // Pulsewidth to use for the drive motor.
 unsigned int STEER_PW = 0; // Pulsewidth to use for the steering motor
-unsigned int Angle_PW = 0; // Pulsewidth to use for the angle of the thrust fans
 unsigned char D_Counts = 0; // Number of overflows, used for setting new_range
 unsigned char S_Counts = 0; // Number of overflows, used for setting new_heading
 unsigned char Overflows = 0; // Number of overflows, used for waiting 1 second
@@ -129,7 +130,7 @@ void main(void) {
 
   while (Overflows < 50);
 
-  angle();
+//  angle();
 
   desired_heading = GetDesiredHeading();
   heading_p_gain = GetHeadingPGain();
@@ -328,8 +329,8 @@ signed int ReadCompass() {
 //
 signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
                  signed int prev_error) {
-	signed int error = (signed int)((signed int)desired_heading -
-        (signed int)current_heading);
+	int error = (int)((int)desired_heading -
+        (int)current_heading);
 
 	// This keeps the error within the -1800 to 1800 range.
 	if (error < -1800) {
@@ -341,9 +342,9 @@ signed int Steer(int current_heading, unsigned int kp, unsigned int kd,
   STEER_PW = (long)STEER_PW_NEUT + ((long)kp * (long)error) / 10 +
       ((long)kd * (long)(error - prev_error));
 
-  if (STEER_PW < STEER_PW_MIN) { 
+  if ((int)STEER_PW < (int)STEER_PW_MIN) { 
     STEER_PW = STEER_PW_MIN;
-  } else if (STEER_PW > STEER_PW_MAX) {
+  } else if ((int)STEER_PW > (int)STEER_PW_MAX) {
     STEER_PW = STEER_PW_MAX;
   }
 
@@ -667,36 +668,39 @@ int atoi(char *buf) {
 //
 void angle(void)
 {
-	unsigned char input_angle;
-	printf("Print 1 to turn the fans left, 3 for right, and 2 for done\r\n\n");
+	signed char input_angle;
+  unsigned int Angle_PW = THRUST_ANGLE_NEUTRAL;
+  lcd_clear();
+	lcd_print("Print 1 to turn the\nfans left, 3 for\nright, and 2 for\ndone");
 	
 	while (1) {
 		do {
 		input_angle = read_keypad();
 		Overflows = 0;
 		while (Overflows < 1);
-		} while (keypad == -1);
+		} while (input_angle == -1);
 
 		// Wait until user releases the keypad
 		do {
-		Overflows = 0;
-		while (Overflows < 1);
+  		Overflows = 0;
+	  	while (Overflows < 1);
 		} while (read_keypad() != -1);
 		
 		if (input_angle == '1') {
-			Angle_PW -= 10;
-			printf("1\r\n");
+			Angle_PW -= 100;
 		}
-		else if (input_andle == '3') {
-			Angle_PW += 10;
-			printf("3\r\n");
+		else if (input_angle == '3') {
+			Angle_PW += 100;
 		}
 		else if (input_angle == '2') {
-			printf("2\r\n");
 			break;
 		}
+
+    printf("Angle_PW: %d\r\n", Angle_PW);
 		
-		PCA0CPL1 = 0xFFFF - MOTOR_PW;
-		PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;
+		PCA0CPL1 = 0xFFFF - Angle_PW;
+		PCA0CPH1 = (0xFFFF - Angle_PW) >> 8;
 	}
+  PCA0CPL1 = 0xFFFF - THRUST_ANGLE_NEUTRAL;
+  PCA0CPH1 = (0xFFFF - THRUST_ANGLE_NEUTRAL) >> 8;
 }

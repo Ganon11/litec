@@ -1,5 +1,5 @@
-*version 9.1 379451683
-u 428
+*version 9.1 670033694
+u 446
 U? 3
 HB? 3
 R? 6
@@ -19,9 +19,9 @@ connectViaLocalLabels 0
 NoStim4ExtIFPortsWarnings 1
 AutoGenStim4ExtIFPorts 1
 @index
-pageloc 1 0 5606 
+pageloc 1 0 5960 
 @status
-c 110:10:30:13:41:42;1291142502
+c 110:11:01:17:33:03;1291242783
 n 2911 110:10:30:13:38:17;1291142297 e 
 *page 1 0 970 720 iA
 @ports
@@ -45,6 +45,10 @@ port 117 +5V 420 560 h
 port 85 +5V 550 300 h
 port 98 EGND 600 290 h
 port 166 EGND 550 530 h
+port 428 +5V 500 110 h
+port 429 +5V 500 210 h
+port 430 EGND 500 240 h
+port 431 EGND 500 150 h
 @parts
 part 209 r 360 270 h
 a 0 sp 0 0 0 10 hlb 100 PART=r
@@ -72,12 +76,6 @@ a 0 s 0:13 0 0 0 hln 100 GATE=
 a 0 u 13 0 15 25 hln 100 VALUE=1.8k
 a 0 x 0:13 0 0 0 hln 100 PKGREF=
 a 0 xp 9 0 15 0 hln 100 REFDES=
-part 5 74365A 420 140 h
-a 0 sp 11 0 40 110 hln 100 PART=74365A
-a 0 s 0:13 0 0 0 hln 100 PKGTYPE=DIP16
-a 0 s 0:13 0 0 0 hln 100 GATE=
-a 0 ap 9 0 40 -2 hln 100 REFDES=U1
-a 0 a 0:13 0 0 0 hln 100 PKGREF=U1
 part 46 r 420 440 d
 a 0 sp 0 0 0 10 hlb 100 PART=r
 a 0 s 0:13 0 0 0 hln 100 PKGTYPE=RC05
@@ -99,12 +97,16 @@ a 0 s 0:13 0 0 0 hln 100 GATE=
 a 0 x 0:13 0 0 0 hln 100 PKGREF=
 a 0 u 13 0 15 25 hln 100 VALUE=10uF
 a 0 xp 9 0 15 0 hln 100 REFDES=
+part 5 74365A 420 140 h
+a 0 sp 11 0 40 110 hln 100 PART=74365A
+a 0 s 0:13 0 0 0 hln 100 PKGTYPE=DIP16
+a 0 s 0:13 0 0 0 hln 100 GATE=
+a 0 ap 9 0 40 -2 hln 100 REFDES=U1
+a 0 a 0:13 0 0 0 hln 100 PKGREF=U1
 @conn
 w 112
 s 450 530 470 530 115
 s 450 530 450 570 121
-w 237
-s 480 170 510 170 145
 w 224
 s 340 380 280 380 223
 w 215
@@ -168,6 +170,18 @@ s 550 300 550 310 86
 s 550 480 600 480 189
 w 131
 s 550 530 600 530 130
+w 433
+s 480 170 490 170 432
+s 490 170 490 130 434
+s 490 130 510 130 436
+w 439
+s 500 110 510 110 438
+w 441
+s 500 210 510 210 440
+w 443
+s 500 240 510 240 442
+w 445
+s 500 150 510 150 444
 @junction
 j 360 270
 + p 209 1
@@ -190,9 +204,6 @@ j 360 400
 j 470 530
 + s 118
 + w 112
-j 480 170
-+ p 5 Y1
-+ w 237
 j 480 220
 + p 5 Y6
 + w 240
@@ -292,6 +303,21 @@ j 600 290
 j 590 340
 + w 414
 + w 414
+j 480 170
++ p 5 Y1
++ w 433
+j 500 110
++ s 428
++ w 439
+j 500 210
++ s 429
++ w 441
+j 500 240
++ s 430
++ w 443
+j 500 150
++ s 431
++ w 445
 @attributes
 a 0 s 0:13 0 0 0 hln 100 PAGETITLE=
 a 0 s 0:13 0 0 0 hln 100 PAGENO=1
@@ -316,7 +342,6 @@ t 231 t 5 280 155 360 171 0 19
 Port 1 Pin 2 (CEX2)
 t 230 t 5 280 205 360 221 0 19
 Port 1 Pin 0 (CEX0)
-r 139 r 0 510 210 620 260
 t 140 t 5 520 215 583 231 0 14
 Steering Servo
 r 143 r 0 510 100 620 190
@@ -339,3 +364,4 @@ Ultrasonic Ranger
 r 40 r 0 600 470 670 540
 t 44 t 5 670 465 752 481 0 18
 Electronic Compass
+r 139 r 0 510 200 620 250
