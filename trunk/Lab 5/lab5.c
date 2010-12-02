@@ -246,6 +246,7 @@ void PCA_Init(void) {
   PCA0CPM0 = 0xC2;
   PCA0CPM1 = 0xC2;
   PCA0CPM2 = 0xC2;
+  PCA0CPM3 = 0xC2;
   PCA0MD = 0x81;
 }
 
@@ -302,7 +303,9 @@ int Thrust_Fans(int range, unsigned int kp, unsigned int kd, int prev_error) {
   
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
-
+  PCA0CPL3 = 0xFFFF - MOTOR_PW;
+  PCA0CPH3 = (0xFFFF - MOTOR_PW) >> 8;
+  
   return (DESIRED_HEIGHT - range);
 }
 
