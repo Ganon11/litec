@@ -127,8 +127,8 @@ void main(void) {
   PCA0CPL3 = 0xFFFF - MOTOR_PW;
   PCA0CPH3 = (0xFFFF - MOTOR_PW) >> 8;
 
-  PCA0CPL3 = 0xFFFF - THRUST_ANGLE_NEUTRAL;
-  PCA0CPH3 = (0xFFFF - THRUST_ANGLE_NEUTRAL) >> 8;
+  PCA0CPL1 = 0xFFFF - THRUST_ANGLE_NEUTRAL;
+  PCA0CPH1 = (0xFFFF - THRUST_ANGLE_NEUTRAL) >> 8;
 
   STEER_PW = STEER_PW_NEUT;
   PCA0CPL0 = 0xFFFF - STEER_PW;
@@ -229,7 +229,7 @@ void Interrupt_Init() {
 // Set up the crossbar
 //
 void XBR0_Init() {
-               // 0001 1111
+               // 0010 0111
   XBR0 = 0x27; // configure crossbar with UART0, SPI, SMBus, and CEX channels
 }
 
