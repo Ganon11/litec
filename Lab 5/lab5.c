@@ -124,13 +124,22 @@ void main(void) {
   MOTOR_PW = THRUST_PW_NEUT;
   PCA0CPL2 = 0xFFFF - MOTOR_PW;
   PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
+  PCA0CPL3 = 0xFFFF - MOTOR_PW;
+  PCA0CPH3 = (0xFFFF - MOTOR_PW) >> 8;
+
+  PCA0CPL3 = 0xFFFF - THRUST_ANGLE_NEUTRAL;
+  PCA0CPH3 = (0xFFFF - THRUST_ANGLE_NEUTRAL) >> 8;
+
+  STEER_PW = STEER_PW_NEUT;
+  PCA0CPL0 = 0xFFFF - STEER_PW;
+  PCA0CPH0 = (0xFFFF - STEER_PW) >> 8;
 
   Overflows = 0; // Overflows is incremented once every 20 ms.  1 s = 1000 ms.
                  // 1000 / 20 = 50.  Wait 50 counts
 
   while (Overflows < 50);
 
-//  angle();
+  angle();
 
   desired_heading = GetDesiredHeading();
   heading_p_gain = GetHeadingPGain();
